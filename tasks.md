@@ -18,8 +18,8 @@ criado: 2026-06-16
 ## Fase 1 — Simulado ancorado (núcleo)
 - [x] T1.1 `RetrievalService::forScope` estruturado (disciplina/tags/páginas → chunks com fonte). AC: retorna chunks com `pagina_id`+`heading_path`; respeita filtro de disciplina.
 - [x] T1.2 `GroundingValidator` determinístico (AC-G1..G3 do `specs/02`). AC (Pest, sem chamar LLM): item ancorado passa; item com fonte fantasma reprova; distrator também-correto reprova.
-- [ ] T1.3 `SimuladoGenerator` (prism-php → Anthropic, saída JSON do `specs/02`): recupera → gera → valida → persiste; rejeita+regenera (máx 2). AC: schema válido; toda questão com `fontes`; `status=rejeitado` quando não ancora (mock do LLM nos testes).
-- [ ] T1.4 Command `studywiki:simulado {disciplina} {--n=5} {--dif=medio}` imprime simulado + (depois) gabarito comentado. AC: roda no CLI ponta a ponta numa disciplina real da vault.
+- [x] T1.3 `SimuladoGenerator` (prism-php → Anthropic, saída JSON do `specs/02`): recupera → gera → valida → persiste; rejeita+regenera (máx 2). AC: schema válido; toda questão com `fontes`; `status=rejeitado` quando não ancora (mock do LLM nos testes).
+- [x] T1.4 Command `studywiki:simulado {disciplina} {--n=5} {--dif=medio}` imprime simulado + (depois) gabarito comentado. AC: roda no CLI ponta a ponta numa disciplina real da vault.
 
 ## Fase 2 — Resumo e Flashcards
 - [ ] T2.1 `ResumoGenerator` (AC-R1..R3). AC: cada bullet com fonte; resumo < soma dos chunks.
@@ -39,3 +39,14 @@ criado: 2026-06-16
 ## Fase 5 — Opcional
 - [ ] T5.1 Repetição espaçada nos flashcards (`proxima_revisao`). 
 - [ ] T5.2 Dashboard de custo/histórico de desempenho por disciplina.
+
+## Fase 6 — Experiência de Aprendizado Avançada ⚠ REFINAMENTO PENDENTE
+
+> Todas as tasks desta fase estão em rascunho. Antes de implementar cada uma, abrir sessão de refinamento para: detalhar AC, definir modelo de dados, decidir stack de UI e integração com as fases anteriores.
+
+- [ ] T6.1 **Novo tipo de Simulado híbrido** ⚠ REFINAR — Prova com 3 questões de múltipla escolha + 3 questões dissertativas/escrita. Requer: novo schema de geração, novo validador de ancoragem para respostas abertas, critérios de avaliação (rubrica). AC e modelo de dados a definir.
+- [ ] T6.2 **Níveis de prova configuráveis** ⚠ REFINAR — Além do `--dif`, definir "formato de prova" (vestibular, concurso, universitário, etc.) com perfis de dificuldade, distribuição de tipos de questão e tempo estimado. AC a definir.
+- [ ] T6.3 **Exportação de prova em PDF** ⚠ REFINAR — Gerar PDF formatado da prova (sem e com gabarito), pronto para impressão. Decisões: biblioteca (wkhtmltopdf, Puppeteer, TCPDF?), template, fontes rastreáveis no rodapé. AC a definir.
+- [ ] T6.4 **Gráficos de evolução de conhecimento** ⚠ REFINAR — Dashboard com histórico de desempenho por disciplina/tema ao longo do tempo: acertos, taxa de ancoragem, tópicos com mais erros, progresso entre sessões. Decisões: biblioteca de charts (Chart.js? ApexCharts?), modelo de dados de desempenho. AC a definir.
+- [ ] T6.5 **Trilha de estudos e cronograma diário (estilo Duolingo)** ⚠ REFINAR — Geração de plano de estudos personalizado com metas diárias, sequência de tópicos, streak de prática, notificações de revisão. Decisões: algoritmo de priorização (baseado em erros? em data da última revisão?), integração com repetição espaçada (T5.1), gamificação (XP, streak). AC a definir.
+- [ ] T6.x **Backlog aberto** ⚠ A LEVANTAR — Outras melhorias identificadas pelo dono durante o uso. Coletar em sessão de refinamento dedicada antes da Fase 6.

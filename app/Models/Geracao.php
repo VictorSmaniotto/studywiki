@@ -19,12 +19,14 @@ class Geracao extends Model
         'payload',
         'custo_tokens',
         'modelo',
+        'regeneracoes',
     ];
 
     protected $casts = [
         'escopo' => 'array',
         'payload' => 'array',
         'custo_tokens' => 'integer',
+        'regeneracoes' => 'integer',
     ];
 
     public function fontes(): HasMany

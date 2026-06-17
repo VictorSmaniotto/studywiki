@@ -39,6 +39,10 @@ class VaultSyncService
             if ($pagina && $pagina->hash === $hash && ! $pagina->trashed()) {
                 // Re-sincroniza tags a partir do frontmatter salvo para recuperar syncs interrompidos.
                 $this->sincronizarTags($pagina, $pagina->frontmatter['tags'] ?? []);
+                // Páginas sincronizadas antes do ChunkingService existir ficam sem chunks — corrige na passagem seguinte.
+                if ($pagina->chunks()->doesntExist()) {
+                    $this->sincronizarChunks($pagina, $pagina->corpo ?? '');
+                }
                 $stats['ignoradas']++;
 
                 continue;
