@@ -22,19 +22,19 @@ criado: 2026-06-16
 - [x] T1.4 Command `studywiki:simulado {disciplina} {--n=5} {--dif=medio}` imprime simulado + (depois) gabarito comentado. AC: roda no CLI ponta a ponta numa disciplina real da vault.
 
 ## Fase 2 — Resumo e Flashcards
-- [ ] T2.1 `ResumoGenerator` (AC-R1..R3). AC: cada bullet com fonte; resumo < soma dos chunks.
-- [ ] T2.2 `FlashcardsGenerator` (AC-F1..F3). AC: verso ancorado; sem duplicado.
-- [ ] T2.3 Reuso: extrair pipeline comum (recupera→gera→valida→persiste) para um `AbstractGenerator`. AC: os 3 geradores compartilham o verificador; teste de cada AC continua verde.
+- [x] T2.1 `ResumoGenerator` (AC-R1..R3). AC: cada bullet com fonte; resumo < soma dos chunks.
+- [x] T2.2 `FlashcardsGenerator` (AC-F1..F3). AC: verso ancorado; sem duplicado.
+- [x] T2.3 Reuso: extrair pipeline comum (recupera→gera→valida→persiste) para um `AbstractGenerator`. AC: os 3 geradores compartilham o verificador; teste de cada AC continua verde.
 
 ## Fase 3 — Front
-- [ ] T3.1 (A/L) Livewire: Biblioteca → Disciplina → botões de geração. AC: lista vem do `sync`; gerar dispara o serviço e mostra resultado com fontes.
-- [ ] T3.2 Tela de Simulado: responde a–e, envia, mostra gabarito comentado com links de fonte, salva `N de M`. AC: histórico persistido; fonte clicável.
-- [ ] T3.3 Admin Filament: disparar sync, listar Geracao (status/custo/regenerações), inspecionar chunks. AC: painel mostra taxa de rejeição do verificador.
+- [x] T3.1 (A/L) Livewire: Biblioteca → Disciplina → botões de geração. AC: lista vem do `sync`; gerar dispara o serviço e mostra resultado com fontes.
+- [x] T3.2 Tela de Simulado: responde a–e, envia, mostra gabarito comentado com links de fonte, salva `N de M`. AC: histórico persistido; fonte clicável.
+- [x] T3.3 Admin Filament: disparar sync, listar Geracao (status/custo/regenerações), inspecionar chunks. AC: painel mostra taxa de rejeição do verificador.
 
 ## Fase 4 — RAG vetorial (quando o estruturado não escalar)
-- [ ] T4.1 Command `studywiki:embed`: gera embeddings dos chunks (text-embedding-3-small), grava `embedding`+`embedding_model`; index HNSW cosseno. AC: re-rodar não re-embeda chunk inalterado.
-- [ ] T4.2 Retrieval híbrido: vetor + full-text (`tsvector`) + rerank, com filtro de metadado. AC: query cross-disciplina recupera chunk relevante não-óbvio por tag; fonte viaja junto.
-- [ ] T4.3 Plugar híbrido nos geradores para escopo amplo ("simulado de tudo"). AC: ancoragem (AC-G*) continua válida no modo híbrido.
+- [x] T4.1 Command `studywiki:embed`: gera embeddings dos chunks (text-embedding-3-small), grava `embedding`+`embedding_model`; index HNSW cosseno. AC: re-rodar não re-embeda chunk inalterado.
+- [x] T4.2 Retrieval híbrido: vetor + full-text (`tsvector`) + rerank, com filtro de metadado. AC: query cross-disciplina recupera chunk relevante não-óbvio por tag; fonte viaja junto.
+- [x] T4.3 Plugar híbrido nos geradores para escopo amplo ("simulado de tudo"). AC: ancoragem (AC-G*) continua válida no modo híbrido.
 
 ## Fase 5 — Opcional
 - [ ] T5.1 Repetição espaçada nos flashcards (`proxima_revisao`). 
@@ -49,4 +49,6 @@ criado: 2026-06-16
 - [ ] T6.3 **Exportação de prova em PDF** ⚠ REFINAR — Gerar PDF formatado da prova (sem e com gabarito), pronto para impressão. Decisões: biblioteca (wkhtmltopdf, Puppeteer, TCPDF?), template, fontes rastreáveis no rodapé. AC a definir.
 - [ ] T6.4 **Gráficos de evolução de conhecimento** ⚠ REFINAR — Dashboard com histórico de desempenho por disciplina/tema ao longo do tempo: acertos, taxa de ancoragem, tópicos com mais erros, progresso entre sessões. Decisões: biblioteca de charts (Chart.js? ApexCharts?), modelo de dados de desempenho. AC a definir.
 - [ ] T6.5 **Trilha de estudos e cronograma diário (estilo Duolingo)** ⚠ REFINAR — Geração de plano de estudos personalizado com metas diárias, sequência de tópicos, streak de prática, notificações de revisão. Decisões: algoritmo de priorização (baseado em erros? em data da última revisão?), integração com repetição espaçada (T5.1), gamificação (XP, streak). AC a definir.
+- [ ] T6.6 **Histórico de gerações re-consultável** ⚠ REFINAR — Hoje a DisciplinaPage mostra só a geração mais recente por tipo; gerações anteriores se perdem na UI. Precisamos de: lista de gerações passadas por disciplina (tipo, data, tokens, status), expansão inline para reler conteúdo (resumo/flashcards/simulado), e indicação de "foi à prova com esse simulado". **Impacto Fase 4:** o histórico precisa guardar e exibir o escopo usado na geração (disciplina, páginas, query semântica) para que o usuário possa reproduzir ou comparar resultados. Modelo de dados: adicionar `escopo_input json` no `Geracao`. AC e stack de UI a definir.
+- [ ] T6.7 **Configuração de escopo de geração** ⚠ REFINAR — Hoje o escopo é implícito (toda a disciplina da página em que o usuário está). O usuário quer controlar isso explicitamente. Mínimo (pré-Fase 4): seleção de disciplina + opção de filtrar por páginas específicas dentro dela. Com Fase 4: adicionar (a) query semântica livre ("mecanismos de herança e polimorfismo") e (b) modo cross-disciplina / "toda a vault" (T4.3). O formulário de escopo deve ser desenhado já com esses quatro modos em mente para não ter que refazer a UI. Decisões a refinar: onde entra o formulário (DisciplinaPage? modal antes de gerar? página dedicada?), como os quatro modos se alternam, e como o escopo escolhido fica salvo no `Geracao` para reprodutibilidade. AC a definir.
 - [ ] T6.x **Backlog aberto** ⚠ A LEVANTAR — Outras melhorias identificadas pelo dono durante o uso. Coletar em sessão de refinamento dedicada antes da Fase 6.
