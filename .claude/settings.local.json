@@ -1,5 +1,11 @@
 {
   "enabledMcpjsonServers": [
-    "mem0"
-  ]
+    "mem0",
+    "linear"
+  ],
+  "permissions": {
+    "allow": [
+      "mcp__linear__save_issue"
+    ]
+  }
 }

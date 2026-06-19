@@ -47,11 +47,17 @@ atualizado: 2026-06-18 (sessão 8)
 
 - **T6.1** — Simulado híbrido ME + dissertativas com rubrica. `SimuladoGenerator::gerar` ganha `n_me` e `n_dis`; schema muda para `{questoes_me, questoes_dis}`. `AvaliacaoDissertativaService` avalia respostas dissertativas via Prism (nota por critério + nota_total). `RespostaSimulado` ganha `respostas_dissertativas` e `notas_dissertativas`. `SimuladoPage` renderiza ambos os tipos e chama o avaliador no envio. `DisciplinaPage` ganha `nDissertativas`. CLI mantém `n_dis=0` por padrão. 8 testes novos (H1..H8); todos os testes de SimuladoGenerator/HybridGenerator/DisciplinaPage/SimuladoPage/StudyWikiSimulado atualizados para o novo schema. 176/176 verde.
 
+- **T6.2** — Perfis de prova Universitário e Vestibular. `DisciplinaPage` ganha `$perfil` + `updatedPerfil()` (Universitário: 3+3/médio; Vestibular: 10+10/difícil). `SimuladoGenerator::gerar()` aceita `$perfil` e `$tempoEstimadoSegundos`; `escopoParaPersistir()` salva ambos no JSON da `Geracao`. `AbstractGenerator` ganhou hook `escopoParaPersistir()` para extensão sem quebrar subclasses. Migration `add_tempo_realizado_to_resposta_simulados` + `RespostaSimulado.tempo_realizado_segundos`. `SimuladoPage` ganha `$tempoDecorrido`; cronômetro Alpine.js no header sticky; envio via `submeter()` Alpine captura o tempo antes de chamar `$wire.enviar()`. Prompt do SimuladoGenerator atualizado para instruir distribuição de questões por headings. 10 testes novos; 186/186 verde.
+
+- **T6.3** — Exportação de prova em PDF. `SimuladoPdfController` (GET `/simulado/{id}/pdf`, DomPDF), view `pdf/simulado.blade.php` com 3 seções selecionáveis (prova em branco / gabarito / respostas). Modal Alpine.js com checkboxes em `partials/simulado-pdf-modal.blade.php`, incluído na `SimuladoPage` (antes e após envio — E5+E6) e na `DisciplinaPage` (histórico de simulados — E5). `Geracao::respostas()` hasMany adicionado. `withCount('respostas')` no DisciplinaPage para habilitar checkbox respostas dinamicamente. Bug corrigido: `range(0, $nDis - 1)` com `$nDis = 0` gera `[0, -1]` (2 elementos) — usar `$nDis > 0 ? range(...) : []`. 17 testes novos; 203/203 suite verde.
+
+- **Sessão 9 — Admin panel brand** — `AdminPanelProvider` ganha `->brandName('StudyWiki')` e `NavigationItem` "Ir para o app" (url `/`, ícone home) na sidebar. `->brandUrl()` não existe no Filament 5 — lança BadMethodCallException; alternativa correta é `navigationItems`. 203/203 testes verdes.
+
 ## Fazendo agora
-- Próxima: T6.2 (Perfis de prova: Universitário e Vestibular)
+- Próxima: T6.4 (Gráficos de evolução de conhecimento)
 
 ## Falta
-- T6.2–T6.x conforme `tasks.md` (T6.0 e T6.1 concluídos; demais pendentes).
+- T6.4–T6.x conforme `tasks.md` (T6.0–T6.3 concluídos; demais pendentes).
 
 ## Decisões tomadas (resumo; detalhe em docs/adr)
 - Retrieval estruturado antes de vetor (ADR-0001).
