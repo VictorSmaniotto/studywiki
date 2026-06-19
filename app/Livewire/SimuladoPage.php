@@ -4,14 +4,18 @@ namespace App\Livewire;
 
 use App\Models\Geracao;
 use App\Models\RespostaSimulado;
+use App\Services\AI\AvaliacaoDissertativaService;
 use Livewire\Component;
 
 class SimuladoPage extends Component
 {
     public Geracao $geracao;
 
-    /** @var array<string, string> Letra escolhida por índice de questão */
+    /** @var array<string, string> Letra escolhida por índice de questão ME */
     public array $respostas = [];
+
+    /** @var array<string, string> Texto digitado por índice de questão dissertativa */
+    public array $respostasDissertativas = [];
 
     public bool $enviado = false;
 
@@ -31,12 +35,22 @@ class SimuladoPage extends Component
             return;
         }
 
-        $questoes = $this->geracao->payload['questoes'] ?? [];
-        $acertos = 0;
+        $questoesME = $this->geracao->payload['questoes_me'] ?? $this->geracao->payload['questoes'] ?? [];
+        $questoesDis = $this->geracao->payload['questoes_dis'] ?? [];
 
-        foreach ($questoes as $i => $questao) {
+        $acertos = 0;
+        foreach ($questoesME as $i => $questao) {
             if (($this->respostas[(string) $i] ?? null) === $questao['correta']) {
                 $acertos++;
+            }
+        }
+
+        $notasDis = [];
+        if (! empty($questoesDis)) {
+            $avaliador = app(AvaliacaoDissertativaService::class);
+            foreach ($questoesDis as $i => $questaoDis) {
+                $resposta = $this->respostasDissertativas[(string) $i] ?? '';
+                $notasDis[] = $avaliador->avaliar($questaoDis, $resposta);
             }
         }
 
@@ -44,7 +58,9 @@ class SimuladoPage extends Component
             'geracao_id' => $this->geracao->id,
             'respostas' => $this->respostas,
             'acertos' => $acertos,
-            'total' => count($questoes),
+            'total' => count($questoesME),
+            'respostas_dissertativas' => $this->respostasDissertativas ?: null,
+            'notas_dissertativas' => $notasDis ?: null,
         ]);
 
         $this->enviado = true;
@@ -58,7 +74,10 @@ class SimuladoPage extends Component
             ->get()
             ->keyBy('pagina_id');
 
-        return view('livewire.simulado', compact('fontesPaginas'))
+        $questoesME = $this->geracao->payload['questoes_me'] ?? $this->geracao->payload['questoes'] ?? [];
+        $questoesDis = $this->geracao->payload['questoes_dis'] ?? [];
+
+        return view('livewire.simulado', compact('fontesPaginas', 'questoesME', 'questoesDis'))
             ->layout('layouts.app');
     }
 }

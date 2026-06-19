@@ -10,10 +10,12 @@ class RespostaSimulado extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['geracao_id', 'respostas', 'acertos', 'total'];
+    protected $fillable = ['geracao_id', 'respostas', 'acertos', 'total', 'respostas_dissertativas', 'notas_dissertativas'];
 
     protected $casts = [
         'respostas' => 'array',
+        'respostas_dissertativas' => 'array',
+        'notas_dissertativas' => 'array',
         'acertos' => 'integer',
         'total' => 'integer',
     ];

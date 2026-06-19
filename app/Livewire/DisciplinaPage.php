@@ -14,63 +14,77 @@ class DisciplinaPage extends Component
 {
     public Disciplina $disciplina;
 
-    public ?Geracao $geracao = null;
+    public string $erroResumo = '';
 
-    public string $erro = '';
+    public string $erroFlashcards = '';
+
+    public string $erroSimulado = '';
+
+    public string $dificuldade = 'medio';
+
+    public int $nQuestoes = 5;
+
+    public int $nDissertativas = 3;
+
+    public array $expandidos = [];
 
     public function mount(string $slug): void
     {
         $this->disciplina = Disciplina::where('slug', $slug)->firstOrFail();
     }
 
+    public function toggleExpandir(int $id): void
+    {
+        $this->expandidos = in_array($id, $this->expandidos)
+            ? array_values(array_filter($this->expandidos, fn ($i) => $i !== $id))
+            : [...$this->expandidos, $id];
+    }
+
     public function gerarResumo(): void
     {
-        $this->erro = '';
-        $this->geracao = null;
+        $this->erroResumo = '';
 
         $geracao = app(ResumoGenerator::class)->gerar(
             new Escopo(disciplina: $this->disciplina->slug)
         );
 
         if ($geracao->status === 'ok') {
-            $this->geracao = $geracao;
-            $this->dispatch('geracaoCompleta', tipo: 'resumo');
+            $this->expandidos[] = $geracao->id;
         } else {
-            $this->erro = 'Geração rejeitada: conteúdo insuficiente para ancoragem. Tente novamente.';
+            $this->erroResumo = 'Geração rejeitada: conteúdo insuficiente para ancoragem. Tente novamente.';
         }
     }
 
     public function gerarFlashcards(): void
     {
-        $this->erro = '';
-        $this->geracao = null;
+        $this->erroFlashcards = '';
 
         $geracao = app(FlashcardsGenerator::class)->gerar(
             new Escopo(disciplina: $this->disciplina->slug)
         );
 
         if ($geracao->status === 'ok') {
-            $this->geracao = $geracao;
-            $this->dispatch('geracaoCompleta', tipo: 'flashcards');
+            $this->expandidos[] = $geracao->id;
         } else {
-            $this->erro = 'Geração rejeitada: conteúdo insuficiente para ancoragem. Tente novamente.';
+            $this->erroFlashcards = 'Geração rejeitada: conteúdo insuficiente para ancoragem. Tente novamente.';
         }
     }
 
     public function gerarSimulado(): void
     {
-        $this->erro = '';
-        $this->geracao = null;
+        $this->erroSimulado = '';
 
         $geracao = app(SimuladoGenerator::class)->gerar(
-            new Escopo(disciplina: $this->disciplina->slug)
+            new Escopo(disciplina: $this->disciplina->slug),
+            $this->nQuestoes,
+            $this->nDissertativas,
+            $this->dificuldade,
         );
 
         if ($geracao->status === 'ok') {
-            $this->geracao = $geracao;
-            $this->dispatch('geracaoCompleta', tipo: 'simulado');
+            $this->expandidos[] = $geracao->id;
         } else {
-            $this->erro = 'Geração rejeitada: conteúdo insuficiente para ancoragem. Tente novamente.';
+            $this->erroSimulado = 'Geração rejeitada: conteúdo insuficiente para ancoragem. Tente novamente.';
         }
     }
 
@@ -81,11 +95,18 @@ class DisciplinaPage extends Component
             ->orderBy('titulo')
             ->get();
 
-        $fontesPaginas = $this->geracao
-            ? $this->geracao->fontes()->with('pagina')->get()->keyBy('pagina_id')
-            : collect();
+        $slug = $this->disciplina->slug;
+        $carregar = fn (string $tipo) => Geracao::whereRaw("escopo->>'disciplina' = ?", [$slug])
+            ->where('tipo', $tipo)
+            ->with('fontes.pagina')
+            ->latest()
+            ->get();
 
-        return view('livewire.disciplina', compact('paginas', 'fontesPaginas'))
-            ->layout('layouts.app');
+        return view('livewire.disciplina', [
+            'paginas' => $paginas,
+            'geracoesResumo' => $carregar('resumo'),
+            'geracoesFlashcards' => $carregar('flashcards'),
+            'geracoesSimulado' => $carregar('simulado'),
+        ])->layout('layouts.app');
     }
 }

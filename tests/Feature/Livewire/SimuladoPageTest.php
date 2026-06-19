@@ -31,7 +31,7 @@ function criarSimulado(int $numQuestoes = 2): Geracao
     return Geracao::factory()->create([
         'tipo' => 'simulado',
         'status' => 'ok',
-        'payload' => ['questoes' => $questoes],
+        'payload' => ['questoes_me' => $questoes, 'questoes_dis' => []],
         'escopo' => ['disciplina' => 'compiladores', 'tags' => [], 'paginas' => []],
     ]);
 }
@@ -59,13 +59,13 @@ it('retorna 404 para geracao que não é simulado', function () {
 
 // ─── AC: salva N de M e mostra gabarito ───────────────────────────────────
 
-it('salva resposta e exibe resultado N de M após envio', function () {
+it('salva resposta e exibe resultado após envio com 100% de acerto', function () {
     $geracao = criarSimulado(2);
 
     Livewire::test(SimuladoPage::class, ['id' => $geracao->id])
         ->set('respostas', ['0' => 'a', '1' => 'b'])
         ->call('enviar')
-        ->assertSee('2 de 2');
+        ->assertSee('100%');
 
     expect(RespostaSimulado::where('geracao_id', $geracao->id)->count())->toBe(1);
     expect(RespostaSimulado::where('geracao_id', $geracao->id)->first()->acertos)->toBe(2);
@@ -77,7 +77,7 @@ it('conta acertos corretamente com respostas parcialmente erradas', function () 
     Livewire::test(SimuladoPage::class, ['id' => $geracao->id])
         ->set('respostas', ['0' => 'a', '1' => 'c'])
         ->call('enviar')
-        ->assertSee('1 de 2');
+        ->assertSee('50%');
 
     expect(RespostaSimulado::where('geracao_id', $geracao->id)->first()->acertos)->toBe(1);
 });

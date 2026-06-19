@@ -42,8 +42,8 @@ function simuladoResponse(int $paginaId, int $chunkId, string $texto = 'compilad
 
     return new StructuredResponse(
         steps: new Collection([]),
-        text: json_encode(['questoes' => [$questao]]),
-        structured: ['questoes' => [$questao]],
+        text: json_encode(['questoes_me' => [$questao], 'questoes_dis' => []]),
+        structured: ['questoes_me' => [$questao], 'questoes_dis' => []],
         finishReason: FinishReason::Stop,
         usage: new Usage(100, 200),
         meta: new Meta('anthropic', 'claude-sonnet-4-6'),
@@ -134,7 +134,7 @@ it('falha com mensagem quando geracao e rejeitada', function () {
     $responseFantasma = new StructuredResponse(
         steps: new Collection([]),
         text: '',
-        structured: ['questoes' => [$questaoFantasma]],
+        structured: ['questoes_me' => [$questaoFantasma], 'questoes_dis' => []],
         finishReason: FinishReason::Stop,
         usage: new Usage(50, 50),
         meta: new Meta('anthropic', 'claude-sonnet-4-6'),

@@ -15,13 +15,16 @@ use Prism\Prism\Structured\Response as StructuredResponse;
 
 class SimuladoGenerator extends AbstractGenerator
 {
-    private int $quantidade = 5;
+    private int $nMe = 5;
+
+    private int $nDis = 0;
 
     private string $dificuldade = 'medio';
 
-    public function gerar(Escopo $escopo, int $quantidade = 5, string $dificuldade = 'medio'): Geracao
+    public function gerar(Escopo $escopo, int $n_me = 5, int $n_dis = 0, string $dificuldade = 'medio'): Geracao
     {
-        $this->quantidade = $quantidade;
+        $this->nMe = $n_me;
+        $this->nDis = $n_dis;
         $this->dificuldade = $dificuldade;
 
         return $this->executarPipeline($escopo);
@@ -37,35 +40,36 @@ class SimuladoGenerator extends AbstractGenerator
         return Prism::structured()
             ->using('anthropic', static::MODELO)
             ->withSystemPrompt($this->systemPrompt())
-            ->withPrompt($this->userPrompt($this->amostrarChunks($chunks), $this->quantidade, $this->dificuldade))
+            ->withPrompt($this->userPrompt($this->amostrarChunks($chunks)))
             ->withSchema($this->buildSchema())
             ->asStructured();
     }
 
     protected function validarConteudo(array $payload, array $chunks): bool
     {
-        $questoes = $payload['questoes'] ?? [];
+        $questoesME = $payload['questoes_me'] ?? [];
+        $questoesDis = $payload['questoes_dis'] ?? [];
 
-        if (empty($questoes)) {
+        if (empty($questoesME) && empty($questoesDis)) {
             return false;
         }
 
-        foreach ($questoes as $questao) {
+        foreach ($questoesME as $questao) {
             $texto = trim(
                 ($questao['contexto'] ?? '').' '.
                 ($questao['enunciado'] ?? '').' '.
                 ($questao['alternativas'][$questao['correta'] ?? ''] ?? '')
             );
 
-            $fontes = array_values(array_map(
-                fn ($f) => array_filter([
-                    'pagina_id' => (int) ($f['pagina_id'] ?? 0),
-                    'chunk_id' => isset($f['chunk_id']) ? (int) $f['chunk_id'] : null,
-                ], fn ($v) => $v !== null),
-                $questao['fontes'] ?? []
-            ));
+            if (! $this->validator->validate(['texto' => $texto, 'fontes' => $this->normalizarFontes($questao['fontes'] ?? [])], $chunks)->aprovado) {
+                return false;
+            }
+        }
 
-            if (! $this->validator->validate(['texto' => $texto, 'fontes' => $fontes], $chunks)->aprovado) {
+        foreach ($questoesDis as $questao) {
+            $texto = trim(($questao['enunciado'] ?? '').' '.($questao['gabarito_referencia'] ?? ''));
+
+            if (! $this->validator->validate(['texto' => $texto, 'fontes' => $this->normalizarFontes($questao['fontes'] ?? [])], $chunks)->aprovado) {
                 return false;
             }
         }
@@ -75,24 +79,61 @@ class SimuladoGenerator extends AbstractGenerator
 
     protected function extrairPaginaIds(array $payload): Collection
     {
-        return collect($payload['questoes'] ?? [])
+        $meIds = collect($payload['questoes_me'] ?? [])
             ->flatMap(fn ($q) => $q['fontes'] ?? [])
-            ->map(fn ($f) => (int) ($f['pagina_id'] ?? 0))
-            ->filter();
+            ->map(fn ($f) => (int) ($f['pagina_id'] ?? 0));
+
+        $disIds = collect($payload['questoes_dis'] ?? [])
+            ->flatMap(fn ($q) => $q['fontes'] ?? [])
+            ->map(fn ($f) => (int) ($f['pagina_id'] ?? 0));
+
+        return $meIds->merge($disIds)->filter();
+    }
+
+    private function normalizarFontes(array $fontes): array
+    {
+        return array_values(array_map(
+            fn ($f) => array_filter([
+                'pagina_id' => (int) ($f['pagina_id'] ?? 0),
+                'chunk_id' => isset($f['chunk_id']) ? (int) $f['chunk_id'] : null,
+            ], fn ($v) => $v !== null),
+            $fontes
+        ));
     }
 
     private function systemPrompt(): string
     {
-        return 'Você é um gerador de simulados de prova. Crie questões de múltipla escolha ancoradas EXCLUSIVAMENTE no conteúdo entre tags [CHUNK]. Não invente fatos ausentes nos chunks. Se o conteúdo for insuficiente, gere menos questões. Cada questão DEVE referenciar os chunk_id e pagina_id que a fundamentam.';
+        $tipos = [];
+        if ($this->nMe > 0) {
+            $tipos[] = "{$this->nMe} questões de múltipla escolha";
+        }
+        if ($this->nDis > 0) {
+            $tipos[] = "{$this->nDis} questões dissertativas";
+        }
+        $descTipos = implode(' e ', $tipos);
+
+        return "Você é um gerador de simulados de prova. Crie {$descTipos} ancoradas EXCLUSIVAMENTE no conteúdo entre tags [CHUNK]. Não invente fatos ausentes nos chunks. Se o conteúdo for insuficiente, gere menos questões. Cada questão DEVE referenciar os chunk_id e pagina_id que a fundamentam.";
     }
 
-    private function userPrompt(array $chunks, int $quantidade, string $dificuldade): string
+    private function userPrompt(array $chunks): string
     {
         $contexto = collect($chunks)
             ->map(fn ($c) => "[CHUNK pagina_id={$c['pagina_id']} chunk_id={$c['chunk_id']}]\n{$c['conteudo']}\n[/CHUNK]")
             ->implode("\n\n");
 
-        return "Gere {$quantidade} questões de nível {$dificuldade} baseadas EXCLUSIVAMENTE no seguinte conteúdo:\n\n{$contexto}\n\nRegras: parágrafo de contexto antes de cada questão; 5 alternativas (a-e), uma correta; distratores plausíveis; misture formatos direto e I/II/III; liste pagina_id e chunk_id das fontes; comente cada alternativa no gabarito.";
+        $instrucoes = [];
+
+        if ($this->nMe > 0) {
+            $instrucoes[] = "- {$this->nMe} questões de múltipla escolha de nível {$this->dificuldade}: parágrafo de contexto, 5 alternativas (a-e), uma correta, distratores plausíveis, misture formatos direto e I/II/III, comentário de gabarito por alternativa.";
+        }
+
+        if ($this->nDis > 0) {
+            $instrucoes[] = "- {$this->nDis} questões dissertativas de nível {$this->dificuldade}: enunciado claro, rubrica com 2-4 critérios (nome + peso, pesos somam 1.0), gabarito_referencia completo.";
+        }
+
+        $instrText = implode("\n", $instrucoes);
+
+        return "Gere um simulado baseado EXCLUSIVAMENTE no seguinte conteúdo:\n\n{$contexto}\n\nGere:\n{$instrText}\n\nListe pagina_id e chunk_id das fontes em cada questão.";
     }
 
     private function buildSchema(): ObjectSchema
@@ -133,8 +174,8 @@ class SimuladoGenerator extends AbstractGenerator
             requiredFields: ['a', 'b', 'c', 'd', 'e'],
         );
 
-        $questaoSchema = new ObjectSchema(
-            name: 'questao',
+        $questaoMESchema = new ObjectSchema(
+            name: 'questao_me',
             description: 'Questão de múltipla escolha',
             properties: [
                 new StringSchema('contexto', 'Parágrafo de contexto antes da questão'),
@@ -148,13 +189,36 @@ class SimuladoGenerator extends AbstractGenerator
             requiredFields: ['contexto', 'enunciado', 'formato', 'alternativas', 'correta', 'fontes', 'comentario_gabarito'],
         );
 
+        $rubricaItemSchema = new ObjectSchema(
+            name: 'criterio_rubrica',
+            description: 'Critério de avaliação da questão dissertativa',
+            properties: [
+                new StringSchema('criterio', 'Descrição do critério de avaliação'),
+                new NumberSchema('peso', 'Peso do critério (0.0–1.0; todos devem somar 1.0)'),
+            ],
+            requiredFields: ['criterio', 'peso'],
+        );
+
+        $questaoDissSchema = new ObjectSchema(
+            name: 'questao_dissertativa',
+            description: 'Questão dissertativa com rubrica explícita',
+            properties: [
+                new StringSchema('enunciado', 'Enunciado da questão dissertativa'),
+                new ArraySchema('rubrica', 'Critérios de avaliação com pesos', $rubricaItemSchema),
+                new StringSchema('gabarito_referencia', 'Resposta modelo completa para o avaliador'),
+                new ArraySchema('fontes', 'Fontes que fundamentam a questão', $fonteSchema),
+            ],
+            requiredFields: ['enunciado', 'rubrica', 'gabarito_referencia', 'fontes'],
+        );
+
         return new ObjectSchema(
             name: 'simulado',
-            description: 'Simulado com questões de múltipla escolha',
+            description: 'Simulado híbrido com múltipla escolha e dissertativas',
             properties: [
-                new ArraySchema('questoes', 'Lista de questões geradas', $questaoSchema),
+                new ArraySchema('questoes_me', 'Questões de múltipla escolha', $questaoMESchema),
+                new ArraySchema('questoes_dis', 'Questões dissertativas', $questaoDissSchema),
             ],
-            requiredFields: ['questoes'],
+            requiredFields: ['questoes_me', 'questoes_dis'],
         );
     }
 }

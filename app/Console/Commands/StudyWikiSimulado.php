@@ -38,11 +38,11 @@ class StudyWikiSimulado extends Command
         $quantidade = max(1, (int) $this->option('n'));
         $dificuldade = $this->option('dif');
 
-        $this->info("Gerando simulado: {$disciplina->nome} · {$quantidade} questões · nível {$dificuldade}");
+        $this->info("Gerando simulado: {$disciplina->nome} · {$quantidade} questões ME · nível {$dificuldade}");
         $this->newLine();
 
         $escopo = new Escopo(disciplina: $disciplina->slug);
-        $geracao = $generator->gerar($escopo, $quantidade, $dificuldade);
+        $geracao = $generator->gerar($escopo, $quantidade, 0, $dificuldade);
 
         if ($geracao->status === 'rejeitado') {
             $this->error('Simulado rejeitado: não foi possível ancorar as questões nos chunks disponíveis.');
@@ -51,7 +51,7 @@ class StudyWikiSimulado extends Command
             return self::FAILURE;
         }
 
-        $questoes = $geracao->payload['questoes'] ?? [];
+        $questoes = $geracao->payload['questoes_me'] ?? $geracao->payload['questoes'] ?? [];
 
         $this->imprimirSimulado($questoes, $disciplina->nome);
 

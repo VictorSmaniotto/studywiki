@@ -59,6 +59,11 @@ function questaoAncorada(int $paginaId, int $chunkId, string $texto = 'análise 
     ];
 }
 
+function fakePayload(array $questoesME, array $questoesDis = []): array
+{
+    return ['questoes_me' => $questoesME, 'questoes_dis' => $questoesDis];
+}
+
 function criarPaginaComChunk(string $disciplinaSlug = 'compiladores', string $conteudo = 'compiladores analisam código fonte léxico'): array
 {
     $disciplina = Disciplina::factory()->create(['slug' => $disciplinaSlug]);
@@ -77,33 +82,33 @@ it('gera simulado aprovado quando LLM retorna questão válida e ancorada', func
     ['pagina' => $pagina, 'chunk' => $chunk, 'disciplina' => $disciplina] = criarPaginaComChunk();
 
     $questao = questaoAncorada($pagina->id, $chunk->id);
-    Prism::fake([fakeStructuredResponse(['questoes' => [$questao]])]);
+    Prism::fake([fakeStructuredResponse(fakePayload([$questao]))]);
 
     $escopo = new Escopo(disciplina: $disciplina->slug);
-    $geracao = app(SimuladoGenerator::class)->gerar($escopo, quantidade: 1);
+    $geracao = app(SimuladoGenerator::class)->gerar($escopo, n_me: 1);
 
     expect($geracao)->toBeInstanceOf(Geracao::class)
         ->and($geracao->status)->toBe('ok')
         ->and($geracao->tipo)->toBe('simulado')
         ->and($geracao->modelo)->toBe('claude-sonnet-4-6')
-        ->and($geracao->payload['questoes'])->toHaveCount(1)
+        ->and($geracao->payload['questoes_me'])->toHaveCount(1)
         ->and($geracao->custo_tokens)->toBe(300);
 });
 
-it('toda questão no payload tem campo fontes', function () {
+it('toda questão ME no payload tem campo fontes', function () {
     ['pagina' => $pagina, 'chunk' => $chunk, 'disciplina' => $disciplina] = criarPaginaComChunk();
 
     $questoes = [
         questaoAncorada($pagina->id, $chunk->id, 'análise léxica de compiladores'),
         questaoAncorada($pagina->id, $chunk->id, 'análise léxica de compiladores código'),
     ];
-    Prism::fake([fakeStructuredResponse(['questoes' => $questoes])]);
+    Prism::fake([fakeStructuredResponse(fakePayload($questoes))]);
 
     $escopo = new Escopo(disciplina: $disciplina->slug);
-    $geracao = app(SimuladoGenerator::class)->gerar($escopo, quantidade: 2);
+    $geracao = app(SimuladoGenerator::class)->gerar($escopo, n_me: 2);
 
     expect($geracao->status)->toBe('ok');
-    foreach ($geracao->payload['questoes'] as $q) {
+    foreach ($geracao->payload['questoes_me'] as $q) {
         expect($q['fontes'])->not->toBeEmpty();
     }
 });
@@ -112,7 +117,7 @@ it('cria registros GeracaoFonte para cada pagina_id único das fontes', function
     ['pagina' => $pagina, 'chunk' => $chunk, 'disciplina' => $disciplina] = criarPaginaComChunk();
 
     $questao = questaoAncorada($pagina->id, $chunk->id);
-    Prism::fake([fakeStructuredResponse(['questoes' => [$questao]])]);
+    Prism::fake([fakeStructuredResponse(fakePayload([$questao]))]);
 
     $geracao = app(SimuladoGenerator::class)->gerar(new Escopo(disciplina: $disciplina->slug), 1);
 
@@ -128,8 +133,8 @@ it('persiste como rejeitado quando questão não tem fontes', function () {
     $questaoSemFontes = questaoAncorada(99, 99);
     $questaoSemFontes['fontes'] = [];
     Prism::fake([
-        fakeStructuredResponse(['questoes' => [$questaoSemFontes]]),
-        fakeStructuredResponse(['questoes' => [$questaoSemFontes]]),
+        fakeStructuredResponse(fakePayload([$questaoSemFontes])),
+        fakeStructuredResponse(fakePayload([$questaoSemFontes])),
     ]);
 
     $geracao = app(SimuladoGenerator::class)->gerar(new Escopo(disciplina: $disciplina->slug), 1);
@@ -142,8 +147,8 @@ it('persiste como rejeitado quando questão referencia fonte fantasma', function
 
     $questaoComFantasma = questaoAncorada(9999, 9999);
     Prism::fake([
-        fakeStructuredResponse(['questoes' => [$questaoComFantasma]]),
-        fakeStructuredResponse(['questoes' => [$questaoComFantasma]]),
+        fakeStructuredResponse(fakePayload([$questaoComFantasma])),
+        fakeStructuredResponse(fakePayload([$questaoComFantasma])),
     ]);
 
     $geracao = app(SimuladoGenerator::class)->gerar(new Escopo(disciplina: $disciplina->slug), 1);
@@ -155,8 +160,8 @@ it('persiste como rejeitado quando LLM retorna questoes vazio', function () {
     ['disciplina' => $disciplina] = criarPaginaComChunk();
 
     Prism::fake([
-        fakeStructuredResponse(['questoes' => []]),
-        fakeStructuredResponse(['questoes' => []]),
+        fakeStructuredResponse(fakePayload([])),
+        fakeStructuredResponse(fakePayload([])),
     ]);
 
     $geracao = app(SimuladoGenerator::class)->gerar(new Escopo(disciplina: $disciplina->slug), 1);
@@ -172,8 +177,8 @@ it('chama LLM duas vezes e rejeita quando ambas falham', function () {
     $questaoFantasma = questaoAncorada(9999, 9999);
 
     $fake = Prism::fake([
-        fakeStructuredResponse(['questoes' => [$questaoFantasma]]),
-        fakeStructuredResponse(['questoes' => [$questaoFantasma]]),
+        fakeStructuredResponse(fakePayload([$questaoFantasma])),
+        fakeStructuredResponse(fakePayload([$questaoFantasma])),
     ]);
 
     $geracao = app(SimuladoGenerator::class)->gerar(new Escopo(disciplina: $disciplina->slug), 1);
@@ -191,8 +196,8 @@ it('aprova na segunda tentativa e registra regeneracao', function () {
     $questaoValida = questaoAncorada($pagina->id, $chunk->id);
 
     $fake = Prism::fake([
-        fakeStructuredResponse(['questoes' => [$questaoFantasma]]),
-        fakeStructuredResponse(['questoes' => [$questaoValida]]),
+        fakeStructuredResponse(fakePayload([$questaoFantasma])),
+        fakeStructuredResponse(fakePayload([$questaoValida])),
     ]);
 
     $geracao = app(SimuladoGenerator::class)->gerar(new Escopo(disciplina: $disciplina->slug), 1);

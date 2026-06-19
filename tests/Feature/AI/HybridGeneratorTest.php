@@ -95,7 +95,7 @@ it('modo hibrido: usa forQuery (chama embedding API) quando escopo tem query', f
     $questao = questaoHybrid($pagina->id, $chunk->id);
     $fake = Prism::fake([
         hybridEmbedResponse($vector),                              // 1) embedQuery
-        hybridStructuredResponse(['questoes' => [$questao]]),     // 2) LLM
+        hybridStructuredResponse(['questoes_me' => [$questao], 'questoes_dis' => []]),     // 2) LLM
     ]);
 
     $geracao = app(SimuladoGenerator::class)->gerar(
@@ -112,7 +112,7 @@ it('modo estruturado: NAO chama embedding quando escopo sem query', function ():
 
     $questao = questaoHybrid($pagina->id, $chunk->id);
     $fake = Prism::fake([
-        hybridStructuredResponse(['questoes' => [$questao]]),     // somente LLM
+        hybridStructuredResponse(['questoes_me' => [$questao], 'questoes_dis' => []]),     // somente LLM
     ]);
 
     $geracao = app(SimuladoGenerator::class)->gerar(
@@ -129,7 +129,7 @@ it('query e salva no campo escopo JSON da geracao', function (): void {
 
     Prism::fake([
         hybridEmbedResponse($vector),
-        hybridStructuredResponse(['questoes' => [questaoHybrid($pagina->id, $chunk->id)]]),
+        hybridStructuredResponse(['questoes_me' => [questaoHybrid($pagina->id, $chunk->id)], 'questoes_dis' => []]),
     ]);
 
     $geracao = app(SimuladoGenerator::class)->gerar(
@@ -150,8 +150,8 @@ it('AC-G1 hibrido: questao sem fontes e rejeitada mesmo via forQuery', function 
 
     Prism::fake([
         hybridEmbedResponse($vector),
-        hybridStructuredResponse(['questoes' => [$questaoSemFonte]]),   // tentativa 1
-        hybridStructuredResponse(['questoes' => [$questaoSemFonte]]),   // tentativa 2 (regeneração)
+        hybridStructuredResponse(['questoes_me' => [$questaoSemFonte], 'questoes_dis' => []]),   // tentativa 1
+        hybridStructuredResponse(['questoes_me' => [$questaoSemFonte], 'questoes_dis' => []]),   // tentativa 2 (regeneração)
     ]);
 
     $geracao = app(SimuladoGenerator::class)->gerar(
@@ -179,8 +179,8 @@ it('AC-G2 hibrido: fonte fantasma (pagina_id inexistente) e rejeitada', function
 
     Prism::fake([
         hybridEmbedResponse($vector),
-        hybridStructuredResponse(['questoes' => [$questaoFonteFake]]),
-        hybridStructuredResponse(['questoes' => [$questaoFonteFake]]),
+        hybridStructuredResponse(['questoes_me' => [$questaoFonteFake], 'questoes_dis' => []]),
+        hybridStructuredResponse(['questoes_me' => [$questaoFonteFake], 'questoes_dis' => []]),
     ]);
 
     $geracao = app(SimuladoGenerator::class)->gerar(
@@ -204,8 +204,8 @@ it('AC-G3 hibrido: overlap lexico insuficiente e rejeitado', function (): void {
 
     Prism::fake([
         hybridEmbedResponse($vector),
-        hybridStructuredResponse(['questoes' => [$questaoSemOverlap]]),
-        hybridStructuredResponse(['questoes' => [$questaoSemOverlap]]),
+        hybridStructuredResponse(['questoes_me' => [$questaoSemOverlap], 'questoes_dis' => []]),
+        hybridStructuredResponse(['questoes_me' => [$questaoSemOverlap], 'questoes_dis' => []]),
     ]);
 
     $geracao = app(SimuladoGenerator::class)->gerar(

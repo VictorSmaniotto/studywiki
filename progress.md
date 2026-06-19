@@ -1,7 +1,7 @@
 ---
 titulo: Progresso (estado da obra)
 tipo: progress
-atualizado: 2026-06-17 (sessão 6)
+atualizado: 2026-06-18 (sessão 8)
 ---
 
 # Progresso
@@ -39,11 +39,19 @@ atualizado: 2026-06-17 (sessão 6)
 
 - **T4.3** — `Escopo` ganha campo `?string $query`. `AbstractGenerator::executarPipeline` despacha para `forQuery($query, $escopo, MAX_CHUNKS)` quando `query !== null`, ou `forScope` caso contrário. `persistir` inclui `query` no JSON salvo. Bug no teste G3: `contexto` da questão também precisa ser sobrescrito (não só `enunciado`), pois o validator concatena todos os campos de texto. 135/135 testes verdes.
 
+- **T5.1** — Repetição espaçada SM-2 nos flashcards. Modelo `Flashcard` (`geracao_id`, `frente`, `verso`, `fontes json`, `proxima_revisao date`, `intervalo`, `facilidade`, `repeticoes`). `FlashcardsGenerator::afterPersistir` cria registros `Flashcard` quando `status='ok'`. `SpacedRepetitionService::revisar(Flashcard, bool $lembrei)` aplica SM-2: lembrei avança intervalo (1→6→round(n×facilidade)), esqueci reseta para 1 dia e penaliza facilidade (mín 1.3). `Flashcard::devePraticar()` compara `proxima_revisao` com hoje. 147/147 testes verdes.
+
+- **T5.2** — `DesempenhoDashboard` (Filament, grupo Observabilidade). Página com totais globais (tokens/gerações/taxa rejeição) + tabela por disciplina com tokens, gerações por tipo (resumo/flashcards/simulado), taxa de rejeição e desempenho médio nos simulados (%). Query usa JSON extraction `escopo->>'disciplina'` + join com `resposta_simulados`. Ordenada por tokens desc. 7 testes novos; 154/154 suite verde.
+
+- **T6.0** — Reestruturação da `DisciplinaPage`: 3 guias (Resumo/Flashcards/Simulado) sempre visíveis, histórico completo de gerações por tipo, expand/collapse por item (Livewire `$expandidos`), form de parâmetros no Simulado (dificuldade + nQuestoes), erros por guia (`$erroResumo/Flashcards/Simulado`). Gerações carregadas via `whereRaw("escopo->>'disciplina' = ?")`. 168/168 testes verdes.
+
+- **T6.1** — Simulado híbrido ME + dissertativas com rubrica. `SimuladoGenerator::gerar` ganha `n_me` e `n_dis`; schema muda para `{questoes_me, questoes_dis}`. `AvaliacaoDissertativaService` avalia respostas dissertativas via Prism (nota por critério + nota_total). `RespostaSimulado` ganha `respostas_dissertativas` e `notas_dissertativas`. `SimuladoPage` renderiza ambos os tipos e chama o avaliador no envio. `DisciplinaPage` ganha `nDissertativas`. CLI mantém `n_dis=0` por padrão. 8 testes novos (H1..H8); todos os testes de SimuladoGenerator/HybridGenerator/DisciplinaPage/SimuladoPage/StudyWikiSimulado atualizados para o novo schema. 176/176 verde.
+
 ## Fazendo agora
-- **Fase 4 concluída.** Próxima fase: T5.1 (repetição espaçada) ou T6.x (Fase 6 UX) — aguardando OK do dono.
+- Próxima: T6.2 (Perfis de prova: Universitário e Vestibular)
 
 ## Falta
-- T4.2, T4.3, Fases 5–6 conforme `tasks.md`.
+- T6.2–T6.x conforme `tasks.md` (T6.0 e T6.1 concluídos; demais pendentes).
 
 ## Decisões tomadas (resumo; detalhe em docs/adr)
 - Retrieval estruturado antes de vetor (ADR-0001).
@@ -53,4 +61,4 @@ atualizado: 2026-06-17 (sessão 6)
 - Harness reforçado: guard-bash bloqueia leitura de `.env` e chave Anthropic inline; hooks sem Sail bloqueiam em vez de fazer fallback para `php artisan`; commands atualizados para `./vendor/bin/sail artisan`; mem0 integrado com seção no CLAUDE.md e passos no `/proxima-task`.
 
 ## Aberto / a confirmar com o dono
-- Chave `VOYAGEAI_API_KEY` deve ser adicionada ao `.env` antes de rodar `studywiki:embed` contra a vault real.
+- ~~Chave `VOYAGEAI_API_KEY` deve ser adicionada ao `.env`~~ — confirmado pelo dono (2026-06-19), chave já presente.
