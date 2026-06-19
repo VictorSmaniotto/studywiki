@@ -8,8 +8,30 @@
         },
         get progresso() {
             return this.totalMe > 0 ? Math.round((this.meRespondidas / this.totalMe) * 100) : 100;
+        },
+        decorrido: 0,
+        intervalo: null,
+        iniciarCronometro() {
+            if (!this.intervalo) {
+                this.intervalo = setInterval(() => this.decorrido++, 1000);
+            }
+        },
+        pararCronometro() {
+            clearInterval(this.intervalo);
+            this.intervalo = null;
+        },
+        formatarTempo(s) {
+            let m = Math.floor(s / 60);
+            let ss = s % 60;
+            return String(m).padStart(2, '0') + ':' + String(ss).padStart(2, '0');
+        },
+        submeter() {
+            this.pararCronometro();
+            $wire.tempoDecorrido = this.decorrido;
+            $wire.enviar();
         }
     }"
+    x-init="$wire.enviado || iniciarCronometro(); $watch('$wire.enviado', v => { if (v) pararCronometro(); })"
 >
     {{-- Breadcrumb --}}
     <div class="mb-6">
@@ -43,24 +65,45 @@
                     $pontosTotal = $pontosME + $pontosDis;
                     $pct = $totalPontos > 0 ? round(($pontosTotal / $totalPontos) * 100) : 0;
                 @endphp
-                <div class="text-center px-4 py-2 rounded-lg" style="background-color: var(--sw-accent-tint);">
-                    <div class="text-2xl font-bold" style="color: var(--color-accent)">
-                        {{ number_format($pontosTotal, 1) }}<span class="text-base font-normal text-zinc-400">/{{ $totalPontos }}</span>
+                <div class="flex items-center gap-4">
+                    @if($resultado->tempo_realizado_segundos)
+                        <div class="text-center">
+                            <div class="text-xs" style="color: var(--sw-muted-text)">Tempo</div>
+                            <div class="font-mono font-bold text-sm">{{ gmdate('i:s', $resultado->tempo_realizado_segundos) }}</div>
+                        </div>
+                    @endif
+                    <div class="text-center px-4 py-2 rounded-lg" style="background-color: var(--sw-accent-tint);">
+                        <div class="text-2xl font-bold" style="color: var(--color-accent)">
+                            {{ number_format($pontosTotal, 1) }}<span class="text-base font-normal text-zinc-400">/{{ $totalPontos }}</span>
+                        </div>
+                        <div class="text-xs mt-0.5" style="color: var(--sw-muted-text)">
+                            {{ $pct }}% de acerto
+                        </div>
                     </div>
-                    <div class="text-xs mt-0.5" style="color: var(--sw-muted-text)">
-                        {{ $pct }}% de acerto
-                    </div>
+                    {{-- Botão Exportar PDF após conclusão (E6) --}}
+                    @include('livewire.partials.simulado-pdf-modal', ['geracaoId' => $geracao->id, 'temRespostas' => true])
                 </div>
             @else
-                <flux:button
-                    wire:click="enviar"
-                    variant="primary"
-                    size="sm"
-                    x-bind:disabled="meRespondidas < totalMe"
-                    x-bind:class="meRespondidas < totalMe ? 'opacity-50' : ''"
-                >
-                    Enviar respostas
-                </flux:button>
+                <div class="flex items-center gap-3">
+                    {{-- Cronômetro --}}
+                    <div class="text-center">
+                        <div class="font-mono font-bold text-lg" style="color: var(--color-accent)" x-text="formatarTempo(decorrido)">00:00</div>
+                        @if(($geracao->escopo['tempo_estimado_segundos'] ?? 0) > 0)
+                            <div class="text-xs" style="color: var(--sw-muted-text)">/ {{ floor($geracao->escopo['tempo_estimado_segundos'] / 60) }} min</div>
+                        @endif
+                    </div>
+                    <flux:button
+                        variant="primary"
+                        size="sm"
+                        x-on:click="submeter()"
+                        x-bind:disabled="meRespondidas < totalMe"
+                        x-bind:class="meRespondidas < totalMe ? 'opacity-50' : ''"
+                    >
+                        Enviar respostas
+                    </flux:button>
+                    {{-- Botão Exportar PDF antes da conclusão (E5) --}}
+                    @include('livewire.partials.simulado-pdf-modal', ['geracaoId' => $geracao->id, 'temRespostas' => false])
+                </div>
             @endif
         </div>
 
@@ -319,8 +362,8 @@
     @if(!$enviado)
         <div class="mt-6 flex justify-end">
             <flux:button
-                wire:click="enviar"
                 variant="primary"
+                x-on:click="submeter()"
                 x-bind:disabled="meRespondidas < totalMe"
                 x-bind:class="meRespondidas < totalMe ? 'opacity-50' : ''"
                 icon="check"

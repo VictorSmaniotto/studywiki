@@ -2,8 +2,10 @@
 
 namespace App\Services\AI;
 
+use App\Models\Flashcard;
 use App\Models\Geracao;
 use App\Services\Retrieval\Escopo;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Prism\Prism\Facades\Prism;
 use Prism\Prism\Schema\ArraySchema;
@@ -87,6 +89,23 @@ class FlashcardsGenerator extends AbstractGenerator
             ->flatMap(fn ($c) => $c['fontes'] ?? [])
             ->map(fn ($f) => (int) ($f['pagina_id'] ?? 0))
             ->filter();
+    }
+
+    protected function afterPersistir(Geracao $geracao, array $payload, string $status): void
+    {
+        if ($status !== 'ok') {
+            return;
+        }
+
+        foreach ($payload['cards'] ?? [] as $card) {
+            Flashcard::create([
+                'geracao_id' => $geracao->id,
+                'frente' => $card['frente'],
+                'verso' => $card['verso'],
+                'fontes' => $card['fontes'] ?? [],
+                'proxima_revisao' => Carbon::today()->toDateString(),
+            ]);
+        }
     }
 
     private function normalizarFrente(string $frente): string

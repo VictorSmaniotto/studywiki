@@ -186,7 +186,7 @@ it('passa dificuldade ao SimuladoGenerator', function () {
     $mock = $this->mock(SimuladoGenerator::class);
     $mock->shouldReceive('gerar')
         ->once()
-        ->with(Mockery::on(fn (Escopo $e) => $e->disciplina === $disciplina->slug), 5, 3, 'dificil')
+        ->with(Mockery::on(fn (Escopo $e) => $e->disciplina === $disciplina->slug), 5, 3, 'dificil', Mockery::any(), Mockery::any())
         ->andReturn($geracao);
 
     Livewire::test(DisciplinaPage::class, ['slug' => $disciplina->slug])
@@ -207,7 +207,7 @@ it('passa nQuestoes ao SimuladoGenerator', function () {
     $mock = $this->mock(SimuladoGenerator::class);
     $mock->shouldReceive('gerar')
         ->once()
-        ->with(Mockery::any(), 10, 3, 'medio')
+        ->with(Mockery::any(), 10, 3, 'medio', Mockery::any(), Mockery::any())
         ->andReturn($geracao);
 
     Livewire::test(DisciplinaPage::class, ['slug' => $disciplina->slug])
@@ -353,4 +353,127 @@ it('exibe erro de simulado quando geração é rejeitada', function () {
     Livewire::test(DisciplinaPage::class, ['slug' => $disciplina->slug])
         ->call('gerarSimulado')
         ->assertSee('Geração rejeitada');
+});
+
+// ──────────────────────────────────────────────
+// P1 — select de perfil visível no formulário
+// ──────────────────────────────────────────────
+
+it('exibe seleção de perfil com opções Universitário e Vestibular', function () {
+    $disciplina = criarDisciplinaComPaginas();
+
+    Livewire::test(DisciplinaPage::class, ['slug' => $disciplina->slug])
+        ->assertSee('Universitário')
+        ->assertSee('Vestibular');
+});
+
+// ──────────────────────────────────────────────
+// P2 — perfil Universitário preenche defaults
+// ──────────────────────────────────────────────
+
+it('aplica defaults de Universitário ao selecionar perfil', function () {
+    $disciplina = criarDisciplinaComPaginas();
+
+    $component = Livewire::test(DisciplinaPage::class, ['slug' => $disciplina->slug])
+        ->set('perfil', 'universitario');
+
+    expect($component->get('nQuestoes'))->toBe(3)
+        ->and($component->get('nDissertativas'))->toBe(3)
+        ->and($component->get('dificuldade'))->toBe('medio');
+});
+
+// ──────────────────────────────────────────────
+// P3 — perfil Vestibular preenche defaults
+// ──────────────────────────────────────────────
+
+it('aplica defaults de Vestibular ao selecionar perfil', function () {
+    $disciplina = criarDisciplinaComPaginas();
+
+    $component = Livewire::test(DisciplinaPage::class, ['slug' => $disciplina->slug])
+        ->set('perfil', 'vestibular');
+
+    expect($component->get('nQuestoes'))->toBe(10)
+        ->and($component->get('nDissertativas'))->toBe(10)
+        ->and($component->get('dificuldade'))->toBe('dificil');
+});
+
+// ──────────────────────────────────────────────
+// P4 — usuário pode sobrescrever N após perfil
+// ──────────────────────────────────────────────
+
+it('permite sobrescrever nQuestoes após selecionar perfil universitário', function () {
+    $disciplina = criarDisciplinaComPaginas();
+
+    $component = Livewire::test(DisciplinaPage::class, ['slug' => $disciplina->slug])
+        ->set('perfil', 'universitario')
+        ->set('nQuestoes', 7);
+
+    expect($component->get('nQuestoes'))->toBe(7)
+        ->and($component->get('nDissertativas'))->toBe(3);
+});
+
+// ──────────────────────────────────────────────
+// P5 — perfil e tempo estimado passados ao generator
+// ──────────────────────────────────────────────
+
+it('passa perfil e tempo estimado ao gerar simulado universitário', function () {
+    $disciplina = criarDisciplinaComPaginas();
+
+    $geracao = Geracao::factory()->create([
+        'tipo' => 'simulado',
+        'status' => 'ok',
+        'escopo' => escopoJson($disciplina),
+        'payload' => ['questoes_me' => [], 'questoes_dis' => []],
+    ]);
+
+    $mock = $this->mock(SimuladoGenerator::class);
+    $mock->shouldReceive('gerar')
+        ->once()
+        ->with(Mockery::any(), 3, 3, 'medio', 'universitario', 36 * 60)
+        ->andReturn($geracao);
+
+    Livewire::test(DisciplinaPage::class, ['slug' => $disciplina->slug])
+        ->set('perfil', 'universitario')
+        ->call('gerarSimulado');
+});
+
+it('passa perfil e tempo estimado ao gerar simulado vestibular', function () {
+    $disciplina = criarDisciplinaComPaginas();
+
+    $geracao = Geracao::factory()->create([
+        'tipo' => 'simulado',
+        'status' => 'ok',
+        'escopo' => escopoJson($disciplina),
+        'payload' => ['questoes_me' => [], 'questoes_dis' => []],
+    ]);
+
+    $mock = $this->mock(SimuladoGenerator::class);
+    $mock->shouldReceive('gerar')
+        ->once()
+        ->with(Mockery::any(), 10, 10, 'dificil', 'vestibular', 120 * 60)
+        ->andReturn($geracao);
+
+    Livewire::test(DisciplinaPage::class, ['slug' => $disciplina->slug])
+        ->set('perfil', 'vestibular')
+        ->call('gerarSimulado');
+});
+
+it('passa perfil personalizado com tempo zero quando sem perfil especial', function () {
+    $disciplina = criarDisciplinaComPaginas();
+
+    $geracao = Geracao::factory()->create([
+        'tipo' => 'simulado',
+        'status' => 'ok',
+        'escopo' => escopoJson($disciplina),
+        'payload' => ['questoes_me' => [], 'questoes_dis' => []],
+    ]);
+
+    $mock = $this->mock(SimuladoGenerator::class);
+    $mock->shouldReceive('gerar')
+        ->once()
+        ->with(Mockery::any(), Mockery::any(), Mockery::any(), Mockery::any(), 'personalizado', 0)
+        ->andReturn($geracao);
+
+    Livewire::test(DisciplinaPage::class, ['slug' => $disciplina->slug])
+        ->call('gerarSimulado');
 });

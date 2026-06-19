@@ -38,4 +38,9 @@ class Geracao extends Model
     {
         return $this->belongsToMany(Pagina::class, 'geracao_fontes');
     }
+
+    public function respostas(): HasMany
+    {
+        return $this->hasMany(RespostaSimulado::class);
+    }
 }

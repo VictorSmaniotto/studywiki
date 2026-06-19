@@ -10,7 +10,7 @@ class RespostaSimulado extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['geracao_id', 'respostas', 'acertos', 'total', 'respostas_dissertativas', 'notas_dissertativas'];
+    protected $fillable = ['geracao_id', 'respostas', 'acertos', 'total', 'respostas_dissertativas', 'notas_dissertativas', 'tempo_realizado_segundos'];
 
     protected $casts = [
         'respostas' => 'array',
@@ -18,6 +18,7 @@ class RespostaSimulado extends Model
         'notas_dissertativas' => 'array',
         'acertos' => 'integer',
         'total' => 'integer',
+        'tempo_realizado_segundos' => 'integer',
     ];
 
     public function geracao(): BelongsTo

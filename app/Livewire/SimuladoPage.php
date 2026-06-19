@@ -19,6 +19,8 @@ class SimuladoPage extends Component
 
     public bool $enviado = false;
 
+    public int $tempoDecorrido = 0;
+
     public ?RespostaSimulado $resultado = null;
 
     public function mount(int $id): void
@@ -61,6 +63,7 @@ class SimuladoPage extends Component
             'total' => count($questoesME),
             'respostas_dissertativas' => $this->respostasDissertativas ?: null,
             'notas_dissertativas' => $notasDis ?: null,
+            'tempo_realizado_segundos' => $this->tempoDecorrido > 0 ? $this->tempoDecorrido : null,
         ]);
 
         $this->enviado = true;

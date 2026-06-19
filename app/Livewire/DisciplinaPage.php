@@ -20,6 +20,8 @@ class DisciplinaPage extends Component
 
     public string $erroSimulado = '';
 
+    public string $perfil = 'personalizado';
+
     public string $dificuldade = 'medio';
 
     public int $nQuestoes = 5;
@@ -31,6 +33,15 @@ class DisciplinaPage extends Component
     public function mount(string $slug): void
     {
         $this->disciplina = Disciplina::where('slug', $slug)->firstOrFail();
+    }
+
+    public function updatedPerfil(): void
+    {
+        match ($this->perfil) {
+            'universitario' => [$this->nQuestoes, $this->nDissertativas, $this->dificuldade] = [3, 3, 'medio'],
+            'vestibular' => [$this->nQuestoes, $this->nDissertativas, $this->dificuldade] = [10, 10, 'dificil'],
+            default => null,
+        };
     }
 
     public function toggleExpandir(int $id): void
@@ -74,11 +85,19 @@ class DisciplinaPage extends Component
     {
         $this->erroSimulado = '';
 
+        $tempoEstimado = match ($this->perfil) {
+            'universitario' => 36 * 60,
+            'vestibular' => 120 * 60,
+            default => 0,
+        };
+
         $geracao = app(SimuladoGenerator::class)->gerar(
             new Escopo(disciplina: $this->disciplina->slug),
             $this->nQuestoes,
             $this->nDissertativas,
             $this->dificuldade,
+            $this->perfil,
+            $tempoEstimado,
         );
 
         if ($geracao->status === 'ok') {
@@ -99,6 +118,7 @@ class DisciplinaPage extends Component
         $carregar = fn (string $tipo) => Geracao::whereRaw("escopo->>'disciplina' = ?", [$slug])
             ->where('tipo', $tipo)
             ->with('fontes.pagina')
+            ->withCount('respostas')
             ->latest()
             ->get();
 

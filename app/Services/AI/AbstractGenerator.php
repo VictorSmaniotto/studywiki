@@ -75,6 +75,16 @@ abstract class AbstractGenerator
         return $this->persistir($ultimoPayload, $escopo, 'rejeitado', $totalTokens, $regeneracoes);
     }
 
+    protected function escopoParaPersistir(Escopo $escopo): array
+    {
+        return [
+            'disciplina' => $escopo->disciplina,
+            'tags' => $escopo->tags,
+            'paginas' => $escopo->paginas,
+            'query' => $escopo->query,
+        ];
+    }
+
     protected function persistir(
         array $payload,
         Escopo $escopo,
@@ -85,12 +95,7 @@ abstract class AbstractGenerator
         return DB::transaction(function () use ($payload, $escopo, $status, $tokens, $regeneracoes) {
             $geracao = Geracao::create([
                 'tipo' => $this->tipo(),
-                'escopo' => [
-                    'disciplina' => $escopo->disciplina,
-                    'tags' => $escopo->tags,
-                    'paginas' => $escopo->paginas,
-                    'query' => $escopo->query,
-                ],
+                'escopo' => $this->escopoParaPersistir($escopo),
                 'status' => $status,
                 'payload' => $payload,
                 'custo_tokens' => $tokens,
@@ -107,9 +112,14 @@ abstract class AbstractGenerator
                 }
             }
 
+            $this->afterPersistir($geracao, $payload, $status);
+
             return $geracao;
         });
     }
+
+    /** Hook chamado dentro da transação de persistir; subclasses podem sobrescrever. */
+    protected function afterPersistir(Geracao $geracao, array $payload, string $status): void {}
 
     /** @param array<int, array<string, mixed>> $chunks */
     protected function amostrarChunks(array $chunks): array

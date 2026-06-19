@@ -21,13 +21,33 @@ class SimuladoGenerator extends AbstractGenerator
 
     private string $dificuldade = 'medio';
 
-    public function gerar(Escopo $escopo, int $n_me = 5, int $n_dis = 0, string $dificuldade = 'medio'): Geracao
-    {
+    private string $perfil = 'personalizado';
+
+    private int $tempoEstimadoSegundos = 0;
+
+    public function gerar(
+        Escopo $escopo,
+        int $n_me = 5,
+        int $n_dis = 0,
+        string $dificuldade = 'medio',
+        string $perfil = 'personalizado',
+        int $tempoEstimadoSegundos = 0,
+    ): Geracao {
         $this->nMe = $n_me;
         $this->nDis = $n_dis;
         $this->dificuldade = $dificuldade;
+        $this->perfil = $perfil;
+        $this->tempoEstimadoSegundos = $tempoEstimadoSegundos;
 
         return $this->executarPipeline($escopo);
+    }
+
+    protected function escopoParaPersistir(Escopo $escopo): array
+    {
+        return array_merge(parent::escopoParaPersistir($escopo), [
+            'perfil' => $this->perfil,
+            'tempo_estimado_segundos' => $this->tempoEstimadoSegundos,
+        ]);
     }
 
     protected function tipo(): string
@@ -112,7 +132,7 @@ class SimuladoGenerator extends AbstractGenerator
         }
         $descTipos = implode(' e ', $tipos);
 
-        return "Você é um gerador de simulados de prova. Crie {$descTipos} ancoradas EXCLUSIVAMENTE no conteúdo entre tags [CHUNK]. Não invente fatos ausentes nos chunks. Se o conteúdo for insuficiente, gere menos questões. Cada questão DEVE referenciar os chunk_id e pagina_id que a fundamentam.";
+        return "Você é um gerador de simulados de prova. Crie {$descTipos} ancoradas EXCLUSIVAMENTE no conteúdo entre tags [CHUNK]. Não invente fatos ausentes nos chunks. Se o conteúdo for insuficiente, gere menos questões. Cada questão DEVE referenciar os chunk_id e pagina_id que a fundamentam. Distribua as questões entre os diferentes tópicos (heading_path) disponíveis — evite concentrar todas as questões num único tópico.";
     }
 
     private function userPrompt(array $chunks): string

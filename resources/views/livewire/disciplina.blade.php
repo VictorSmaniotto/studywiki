@@ -237,6 +237,12 @@
                     <flux:text size="xs" class="mt-0.5">Questões de múltipla escolha com gabarito comentado.</flux:text>
                 </div>
                 <div class="flex items-center gap-2 flex-wrap">
+                    {{-- Perfil --}}
+                    <select wire:model.live="perfil" class="text-sm border rounded-md px-2 py-1.5 bg-white dark:bg-zinc-900" style="border-color: var(--sw-card-border)">
+                        <option value="personalizado">Personalizado</option>
+                        <option value="universitario">Universitário (~36 min)</option>
+                        <option value="vestibular">Vestibular (~120 min)</option>
+                    </select>
                     <select wire:model="dificuldade" class="text-sm border rounded-md px-2 py-1.5 bg-white dark:bg-zinc-900" style="border-color: var(--sw-card-border)">
                         <option value="facil">Fácil</option>
                         <option value="medio">Médio</option>
@@ -320,7 +326,7 @@
                         </div>
 
                         @if($expandido && $ger->status === 'ok')
-                            <div class="border-t p-4" style="border-color: var(--sw-card-border)">
+                            <div class="border-t p-4 flex items-center gap-3" style="border-color: var(--sw-card-border)">
                                 <flux:button
                                     href="{{ route('simulado', $ger->id) }}"
                                     variant="primary"
@@ -330,6 +336,11 @@
                                 >
                                     Iniciar Simulado
                                 </flux:button>
+                                {{-- Exportar PDF da disciplina (E5) --}}
+                                @include('livewire.partials.simulado-pdf-modal', [
+                                    'geracaoId'    => $ger->id,
+                                    'temRespostas' => ($ger->respostas_count ?? 0) > 0,
+                                ])
                             </div>
                         @endif
                     </flux:card>

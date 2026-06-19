@@ -127,3 +127,36 @@ it('exibe fonte da questão no gabarito quando pagina existe', function () {
         ->call('enviar')
         ->assertSee('Análise Léxica');
 });
+
+// ─── P6/P7 — cronômetro e tempo realizado ────────────────────────────────
+
+it('tem propriedade tempoDecorrido inicializada em zero', function () {
+    $geracao = criarSimulado(1);
+
+    $component = Livewire::test(SimuladoPage::class, ['id' => $geracao->id]);
+
+    expect($component->get('tempoDecorrido'))->toBe(0);
+});
+
+it('persiste tempo_realizado_segundos ao enviar com tempoDecorrido definido', function () {
+    $geracao = criarSimulado(1);
+
+    Livewire::test(SimuladoPage::class, ['id' => $geracao->id])
+        ->set('respostas', ['0' => 'a'])
+        ->set('tempoDecorrido', 125)
+        ->call('enviar');
+
+    $resposta = RespostaSimulado::where('geracao_id', $geracao->id)->first();
+    expect($resposta->tempo_realizado_segundos)->toBe(125);
+});
+
+it('persiste tempo_realizado_segundos como null quando tempoDecorrido é zero', function () {
+    $geracao = criarSimulado(1);
+
+    Livewire::test(SimuladoPage::class, ['id' => $geracao->id])
+        ->set('respostas', ['0' => 'a'])
+        ->call('enviar');
+
+    $resposta = RespostaSimulado::where('geracao_id', $geracao->id)->first();
+    expect($resposta->tempo_realizado_segundos)->toBeNull();
+});
