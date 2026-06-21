@@ -7,6 +7,7 @@ use App\Models\Geracao;
 use App\Services\AI\FlashcardsGenerator;
 use App\Services\AI\ResumoGenerator;
 use App\Services\AI\SimuladoGenerator;
+use App\Services\EvolucaoService;
 use App\Services\Retrieval\Escopo;
 use Livewire\Component;
 
@@ -122,11 +123,18 @@ class DisciplinaPage extends Component
             ->latest()
             ->get();
 
+        $evolucao = app(EvolucaoService::class);
+
         return view('livewire.disciplina', [
             'paginas' => $paginas,
             'geracoesResumo' => $carregar('resumo'),
             'geracoesFlashcards' => $carregar('flashcards'),
             'geracoesSimulado' => $carregar('simulado'),
+            'scoresPorSessao' => $evolucao->scoresPorSessao($slug),
+            'errosPorTopico' => $evolucao->errosPorTopico($slug),
+            'tempoVsEstimado' => $evolucao->tempoVsEstimado($slug),
+            'distribuicaoQuestoes' => $evolucao->distribuicaoQuestoes($slug),
+            'criteriosMaisPerdidos' => $evolucao->criteriosMaisPerdidos($slug),
         ])->layout('layouts.app');
     }
 }

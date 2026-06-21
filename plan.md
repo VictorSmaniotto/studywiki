@@ -32,6 +32,7 @@ criado: 2026-06-16
 - `laravel/framework` ^13 · PHP 8.4 · `livewire/livewire` ^4 · `filament/filament` ^5 · `pestphp/pest` ^4.
 - `pgvector/pgvector` (extensão) + driver; `prism-php/prism` para LLM e embeddings (Anthropic + OpenAI embeddings).
 - `league/commonmark` ou parser markdown + `spatie/yaml-front-matter` para ler a vault.
+- `chart.js` ^4 (npm, T6.4) — gráficos de evolução via Alpine.js na DisciplinaPage e no painel Filament.
 
 ## Contratos principais
 - `studywiki:sync` → idempotente; re-processa só o que mudou (hash). 

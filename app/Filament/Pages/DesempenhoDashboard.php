@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Widgets\DesempenhoGlobalWidget;
+use App\Services\EvolucaoService;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\DB;
 
@@ -77,5 +78,15 @@ class DesempenhoDashboard extends Page
                 'simulados_respondidos' => $desemp ? (int) $desemp->simulados_respondidos : 0,
             ];
         })->values()->all();
+    }
+
+    public function getDadosGraficosGlobais(): array
+    {
+        $evolucao = app(EvolucaoService::class);
+
+        return [
+            'scores_por_disciplina' => $evolucao->scoresMediaPorDisciplina(),
+            'criterios_perdidos' => $evolucao->criteriosPerdidosGlobais(),
+        ];
     }
 }

@@ -53,11 +53,13 @@ atualizado: 2026-06-18 (sessão 8)
 
 - **Sessão 9 — Admin panel brand** — `AdminPanelProvider` ganha `->brandName('StudyWiki')` e `NavigationItem` "Ir para o app" (url `/`, ícone home) na sidebar. `->brandUrl()` não existe no Filament 5 — lança BadMethodCallException; alternativa correta é `navigationItems`. 203/203 testes verdes.
 
+- **T6.4** — Gráficos de evolução de conhecimento. `EvolucaoService` com 5 métodos (scoresPorSessao, errosPorTopico, tempoVsEstimado, distribuicaoQuestoes, criteriosMaisPerdidos). Aba "Evolução" adicionada à DisciplinaPage com 5 Chart.js charts (linha, 2×barra horizontal, donut, barra full-width). Chart.js 4.5 instalado via npm e bundlado no app.js (window.Chart). DesempenhoDashboard admin ganhou getDadosGraficosGlobais + 2 gráficos. Bug corrigido: ROUND(double precision, int) não existe no Postgres — cast para ::numeric necessário. 16 testes novos; 219/219 suite verde.
+
 ## Fazendo agora
-- Próxima: T6.4 (Gráficos de evolução de conhecimento)
+- Próxima: T6.5 (⚠ REFINAR antes de implementar)
 
 ## Falta
-- T6.4–T6.x conforme `tasks.md` (T6.0–T6.3 concluídos; demais pendentes).
+- T6.5–T6.x conforme `tasks.md` (T6.0–T6.4 concluídos; T6.5 marcado como REFINAR).
 
 ## Decisões tomadas (resumo; detalhe em docs/adr)
 - Retrieval estruturado antes de vetor (ADR-0001).

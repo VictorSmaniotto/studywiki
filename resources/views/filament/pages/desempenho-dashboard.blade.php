@@ -1,5 +1,8 @@
 <x-filament-panels::page>
-    @php $disciplinas = $this->getDadosPorDisciplina(); @endphp
+    @php
+        $disciplinas = $this->getDadosPorDisciplina();
+        $graficos    = $this->getDadosGraficosGlobais();
+    @endphp
 
     <x-filament::section>
         <x-slot name="heading">Por Disciplina</x-slot>
@@ -65,4 +68,76 @@
             </div>
         @endif
     </x-filament::section>
+
+    {{-- G7: Gráficos globais --}}
+    @if(! empty($graficos['scores_por_disciplina']) || ! empty($graficos['criterios_perdidos']))
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" integrity="sha384-xknFHKK4OKJQOJnZCVoQMgRKtgXH0gpw5mQFXRUVMgMEuToxEKGinLPNLp7lBER" crossorigin="anonymous"></script>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+
+            {{-- Score médio por disciplina --}}
+            @if(! empty($graficos['scores_por_disciplina']))
+                <x-filament::section>
+                    <x-slot name="heading">Score médio por disciplina (%)</x-slot>
+                    <canvas id="scoreGlobalChart" height="220"></canvas>
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function () {
+                            new Chart(document.getElementById('scoreGlobalChart'), {
+                                type: 'bar',
+                                data: {
+                                    labels: @json(array_column($graficos['scores_por_disciplina'], 'disciplina')),
+                                    datasets: [{
+                                        label: 'Score ME (%)',
+                                        data: @json(array_column($graficos['scores_por_disciplina'], 'media_score')),
+                                        backgroundColor: 'rgba(99,102,241,0.75)',
+                                        borderColor: '#6366f1',
+                                        borderWidth: 1,
+                                    }]
+                                },
+                                options: {
+                                    indexAxis: 'y',
+                                    responsive: true,
+                                    plugins: { legend: { display: false } },
+                                    scales: { x: { min: 0, max: 100, ticks: { callback: v => v + '%' } } }
+                                }
+                            });
+                        });
+                    </script>
+                </x-filament::section>
+            @endif
+
+            {{-- Critérios de rubrica com mais pontos perdidos --}}
+            @if(! empty($graficos['criterios_perdidos']))
+                <x-filament::section>
+                    <x-slot name="heading">Critérios com mais pontos perdidos (global)</x-slot>
+                    <canvas id="criteriosGlobalChart" height="220"></canvas>
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function () {
+                            new Chart(document.getElementById('criteriosGlobalChart'), {
+                                type: 'bar',
+                                data: {
+                                    labels: @json(array_column($graficos['criterios_perdidos'], 'criterio')),
+                                    datasets: [{
+                                        label: 'Média perdida (%)',
+                                        data: @json(array_column($graficos['criterios_perdidos'], 'media_perdido')),
+                                        backgroundColor: 'rgba(239,68,68,0.75)',
+                                        borderColor: '#ef4444',
+                                        borderWidth: 1,
+                                    }]
+                                },
+                                options: {
+                                    indexAxis: 'y',
+                                    responsive: true,
+                                    plugins: { legend: { display: false } },
+                                    scales: { x: { min: 0, max: 100, ticks: { callback: v => v + '%' } } }
+                                }
+                            });
+                        });
+                    </script>
+                </x-filament::section>
+            @endif
+
+        </div>
+    @endif
+
 </x-filament-panels::page>

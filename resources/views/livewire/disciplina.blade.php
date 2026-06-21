@@ -15,6 +15,7 @@
             'resumo'     => ['label' => 'Resumo', 'icon' => 'document-text'],
             'flashcards' => ['label' => 'Flashcards', 'icon' => 'rectangle-stack'],
             'simulado'   => ['label' => 'Simulado', 'icon' => 'clipboard-document-check'],
+            'evolucao'   => ['label' => 'Evolução', 'icon' => 'chart-bar'],
         ] as $key => $item)
             <button
                 @click="tab = '{{ $key }}'"
@@ -345,6 +346,196 @@
                         @endif
                     </flux:card>
                 @endforeach
+            </div>
+        @endif
+    </div>
+
+    {{-- Tab: Evolução --}}
+    <div x-show="tab === 'evolucao'" x-cloak>
+        @php
+            $temDados   = ! empty($scoresPorSessao);
+            $temErros   = ! empty($errosPorTopico);
+            $temTempo   = ! empty($tempoVsEstimado);
+            $temDist    = ($distribuicaoQuestoes['me'] + $distribuicaoQuestoes['dissertativas']) > 0;
+            $temRubrica = ! empty($criteriosMaisPerdidos);
+        @endphp
+
+        {{-- Dados PHP → JS via <script> (evita @json() dentro de atributos Alpine) --}}
+        <script>
+            window._swEvo = {
+                scores:  @json($scoresPorSessao),
+                erros:   @json($errosPorTopico),
+                tempo:   @json($tempoVsEstimado),
+                dist:    { me: {{ $distribuicaoQuestoes['me'] }}, dis: {{ $distribuicaoQuestoes['dissertativas'] }} },
+                rubrica: @json($criteriosMaisPerdidos),
+            };
+        </script>
+
+        @if(! $temDados && ! $temErros && ! $temDist && ! $temRubrica)
+            {{-- G9: estado vazio --}}
+            <flux:card class="p-8 text-center">
+                <flux:icon name="chart-bar" class="w-10 h-10 mx-auto mb-3" style="color: var(--sw-muted)" />
+                <flux:heading size="sm" class="mb-1">Sem dados de evolução ainda</flux:heading>
+                <flux:text size="sm" class="text-zinc-400">
+                    Complete pelo menos um simulado para ver seus gráficos de evolução.
+                </flux:text>
+            </flux:card>
+        @else
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                {{-- G1: Score por sessão --}}
+                <flux:card class="p-4">
+                    <flux:heading size="sm" class="mb-3">Score por sessão</flux:heading>
+                    @if($temDados)
+                        <div x-data="{ chart: null }"
+                             x-effect="if (tab === 'evolucao' && !chart) $nextTick(() => {
+                                var d = window._swEvo.scores;
+                                chart = new Chart($refs.scoreChart, {
+                                    type: 'line',
+                                    data: {
+                                        labels: d.map(function(r){ return r.data }),
+                                        datasets: [
+                                            { label: 'ME (%)', data: d.map(function(r){ return r.score_me }),
+                                              borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.1)',
+                                              tension: 0.3, fill: true, spanGaps: true },
+                                            { label: 'Dissertativa (%)', data: d.map(function(r){ return r.score_dis }),
+                                              borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)',
+                                              tension: 0.3, fill: true, spanGaps: true }
+                                        ]
+                                    },
+                                    options: { responsive: true, maintainAspectRatio: false,
+                                        plugins: { legend: { position: 'bottom' } },
+                                        scales: { y: { min: 0, max: 100, ticks: { callback: function(v){ return v + '%' } } } }
+                                    }
+                                })
+                             })">
+                            <div style="position:relative;height:220px">
+                                <canvas x-ref="scoreChart"></canvas>
+                            </div>
+                        </div>
+                    @else
+                        <flux:text size="sm" class="text-zinc-400">Nenhum simulado respondido ainda.</flux:text>
+                    @endif
+                </flux:card>
+
+                {{-- G2: Erros por tópico --}}
+                <flux:card class="p-4">
+                    <flux:heading size="sm" class="mb-3">Tópicos com mais erros</flux:heading>
+                    @if($temErros)
+                        <div x-data="{ chart: null }"
+                             x-effect="if (tab === 'evolucao' && !chart) $nextTick(() => {
+                                var d = window._swEvo.erros;
+                                chart = new Chart($refs.errosChart, {
+                                    type: 'bar',
+                                    data: {
+                                        labels: d.map(function(r){ return r.heading }),
+                                        datasets: [{ label: 'Erros', data: d.map(function(r){ return r.erros }),
+                                            backgroundColor: 'rgba(239,68,68,0.7)', borderColor: '#ef4444', borderWidth: 1 }]
+                                    },
+                                    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                                        plugins: { legend: { display: false } },
+                                        scales: { x: { ticks: { stepSize: 1 } } }
+                                    }
+                                })
+                             })">
+                            <div style="position:relative;height:220px">
+                                <canvas x-ref="errosChart"></canvas>
+                            </div>
+                        </div>
+                    @else
+                        <flux:text size="sm" class="text-zinc-400">Nenhum erro registrado ainda.</flux:text>
+                    @endif
+                </flux:card>
+
+                {{-- G3: Tempo realizado vs estimado --}}
+                <flux:card class="p-4">
+                    <flux:heading size="sm" class="mb-3">Tempo realizado vs estimado (min)</flux:heading>
+                    @if($temTempo)
+                        <div x-data="{ chart: null }"
+                             x-effect="if (tab === 'evolucao' && !chart) $nextTick(() => {
+                                var d = window._swEvo.tempo;
+                                chart = new Chart($refs.tempoChart, {
+                                    type: 'bar',
+                                    data: {
+                                        labels: d.map(function(r){ return r.data }),
+                                        datasets: [
+                                            { label: 'Realizado', data: d.map(function(r){ return r.realizado_min }),
+                                              backgroundColor: 'rgba(99,102,241,0.7)' },
+                                            { label: 'Estimado', data: d.map(function(r){ return r.estimado_min }),
+                                              backgroundColor: 'rgba(148,163,184,0.5)' }
+                                        ]
+                                    },
+                                    options: { responsive: true, maintainAspectRatio: false,
+                                        plugins: { legend: { position: 'bottom' } },
+                                        scales: { y: { beginAtZero: true } }
+                                    }
+                                })
+                             })">
+                            <div style="position:relative;height:220px">
+                                <canvas x-ref="tempoChart"></canvas>
+                            </div>
+                        </div>
+                    @else
+                        <flux:text size="sm" class="text-zinc-400">Nenhum simulado com tempo registrado.</flux:text>
+                    @endif
+                </flux:card>
+
+                {{-- G4: ME vs Dissertativa --}}
+                <flux:card class="p-4">
+                    <flux:heading size="sm" class="mb-3">Distribuição de questões</flux:heading>
+                    @if($temDist)
+                        <div x-data="{ chart: null }"
+                             x-effect="if (tab === 'evolucao' && !chart) $nextTick(() => {
+                                var d = window._swEvo.dist;
+                                chart = new Chart($refs.distChart, {
+                                    type: 'doughnut',
+                                    data: {
+                                        labels: ['Múltipla escolha', 'Dissertativa'],
+                                        datasets: [{ data: [d.me, d.dis],
+                                            backgroundColor: ['rgba(99,102,241,0.8)', 'rgba(245,158,11,0.8)'],
+                                            borderWidth: 2 }]
+                                    },
+                                    options: { responsive: true, maintainAspectRatio: false,
+                                        plugins: { legend: { position: 'bottom' } } }
+                                })
+                             })">
+                            <div style="position:relative;height:220px">
+                                <canvas x-ref="distChart"></canvas>
+                            </div>
+                        </div>
+                    @else
+                        <flux:text size="sm" class="text-zinc-400">Nenhum simulado gerado ainda.</flux:text>
+                    @endif
+                </flux:card>
+
+                {{-- G5: Critérios de rubrica com mais pontos perdidos --}}
+                @if($temRubrica)
+                    <flux:card class="p-4 lg:col-span-2">
+                        <flux:heading size="sm" class="mb-3">Critérios de rubrica com mais pontos perdidos</flux:heading>
+                        <div x-data="{ chart: null }"
+                             x-effect="if (tab === 'evolucao' && !chart) $nextTick(() => {
+                                var d = window._swEvo.rubrica;
+                                chart = new Chart($refs.rubricaChart, {
+                                    type: 'bar',
+                                    data: {
+                                        labels: d.map(function(r){ return r.criterio }),
+                                        datasets: [{ label: 'Média pontos perdidos (%)',
+                                            data: d.map(function(r){ return r.media_perdido }),
+                                            backgroundColor: 'rgba(239,68,68,0.7)', borderColor: '#ef4444', borderWidth: 1 }]
+                                    },
+                                    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                                        plugins: { legend: { display: false } },
+                                        scales: { x: { min: 0, max: 100, ticks: { callback: function(v){ return v + '%' } } } }
+                                    }
+                                })
+                             })">
+                            <div style="position:relative;height:200px">
+                                <canvas x-ref="rubricaChart"></canvas>
+                            </div>
+                        </div>
+                    </flux:card>
+                @endif
+
             </div>
         @endif
     </div>
