@@ -55,6 +55,9 @@
             <flux:navbar.item href="{{ route('trilha') }}" :current="request()->routeIs('trilha')">
                 Trilha
             </flux:navbar.item>
+            <flux:navbar.item href="{{ route('metas') }}" :current="request()->routeIs('metas')">
+                Metas
+            </flux:navbar.item>
             <flux:navbar.item href="{{ route('chat') }}" :current="request()->routeIs('chat')">
                 Chat
             </flux:navbar.item>

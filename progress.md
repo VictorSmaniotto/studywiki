@@ -68,11 +68,13 @@ atualizado: 2026-06-20 (sessão 10)
 
 - **T6.11** — Lembretes diários. `EnviarLembreteDiario` command (`studywiki:lembrete`) + `LembreteDiario` Mailable + template Blade. Agendado em `routes/console.php` com `Schedule::command()->dailyAt(Setting::get('lembrete_horario', '08:00'))`. Settings: `lembrete_ativo` (default '1') + `lembrete_horario`. Streak em risco quando `streak_last_date == ontem && streakAtual > 0`. 5/5 testes novos; 280/280 suite verde.
 
+- **T6.12** — Metas semanais. `MetaService::progressoSemana()` agrega `resposta_simulados` (simulados concluídos), `flashcards` (revisados via SM-2: `updated_at > created_at`) e `geracoes` (status=ok) da semana corrente (startOfWeek..endOfWeek Carbon). `salvarMetas()` persiste em settings. Livewire `Metas` com `wire:poll.30000ms` + form de configuração. Rota `/metas` + link "Metas" no navbar. Criada `RespostaSimuladoFactory` (ausente na codebase). 7/7 testes novos; 287/287 suite verde.
+
 ## Fazendo agora
-- Próxima: T6.12 — Metas semanais.
+- Próxima: T6.13 — Import de PDF.
 
 ## Falta
-- T6.12 – T6.14 (Fase 6 continuação)
+- T6.13 – T6.14 (Fase 6 continuação)
 - T7.1 – T7.4 (NativePHP)
 
 ## Decisões tomadas (resumo; detalhe em docs/adr)
