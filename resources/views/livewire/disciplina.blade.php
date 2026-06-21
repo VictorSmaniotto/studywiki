@@ -1,4 +1,4 @@
-<div x-data="{ tab: 'resumo' }">
+<div x-data="{ tab: 'resumo' }" @sw-mudar-aba.window="tab = $event.detail.aba">
     {{-- Breadcrumb + header --}}
     <div class="mb-6">
         <flux:link href="{{ route('biblioteca') }}" class="text-sm mb-2 inline-flex items-center gap-1">
@@ -398,6 +398,35 @@
                 rubrica: @json($criteriosMaisPerdidos),
             };
         </script>
+
+        {{-- Pontos fracos (L1..L3) --}}
+        @if(! empty($lacunas))
+            <flux:card class="p-4 mb-6" style="border-left: 4px solid #ef4444">
+                <flux:heading size="sm" class="mb-3 flex items-center gap-2">
+                    <flux:icon name="exclamation-triangle" class="w-4 h-4" style="color:#ef4444" />
+                    Pontos fracos
+                </flux:heading>
+                <div class="space-y-2">
+                    @foreach($lacunas as $lacuna)
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <span class="text-sm font-medium">{{ $lacuna['heading'] }}</span>
+                                <span class="text-xs ml-2" style="color: var(--sw-muted)">
+                                    {{ $lacuna['erros'] }}/{{ $lacuna['total'] }} erros ({{ $lacuna['taxa_erro'] }}%)
+                                </span>
+                            </div>
+                            <flux:button
+                                wire:click="revisarTopico(@js($lacuna['heading']))"
+                                size="xs"
+                                variant="ghost"
+                            >
+                                Revisar
+                            </flux:button>
+                        </div>
+                    @endforeach
+                </div>
+            </flux:card>
+        @endif
 
         @if(! $temDados && ! $temErros && ! $temDist && ! $temRubrica)
             {{-- G9: estado vazio --}}

@@ -62,11 +62,18 @@ atualizado: 2026-06-20 (sessão 10)
 - **T6.6** — Sem escopo residual. Histórico de gerações já coberto integralmente por T6.0 (foreach em todas as gerações por tipo na DisciplinaPage).
 - **T6.7** — Query semântica nos geradores. `DisciplinaPage` ganhou `queryResumo`, `queryFlashcards`, `querySimulado` (string). Quando preenchidos, `Escopo::$query` é passado → `AbstractGenerator` despacha para `forQuery` (retrieval híbrido T4.2). Campo "Focar em tópico" adicionado nos cards de Resumo, Flashcards e Simulado. 5 testes novos; 261/261 suite verde.
 
+- **T6.9** — Chat com a vault. `ChatService` em `app/Services/AI/` usa `RetrievalService::forQuery` (RAG híbrido T4.2) + `Prism::text()` para responder perguntas livres. Sem `Geracao` — efêmero. Livewire `Chat` com `$historico` em sessão (chave `chat_historico`), filtro por disciplina, `enviar()` e `limpar()`. Rota `/chat` + link "Chat" no navbar. Bug corrigido no teste C2: `'Não'` maiúsculo vs `'não'` minúsculo no assert. 8/8 testes novos; 269/269 suite verde.
+
+- **T6.10** — Detecção de lacunas de conhecimento. `LacunaService::detectar(Disciplina)` agrega erros de ME por `heading_path` (batch-load de chunks), exige ≥2 simulados respondidos, retorna top 3 por taxa de erro. Card "Pontos fracos" na aba Evolução; botão "Revisar" chama `revisarTopico()` → seta `queryResumo` e despacha `sw-mudar-aba` para mudar aba via Alpine. 6/6 testes; 275/275 suite verde.
+
+- **T6.11** — Lembretes diários. `EnviarLembreteDiario` command (`studywiki:lembrete`) + `LembreteDiario` Mailable + template Blade. Agendado em `routes/console.php` com `Schedule::command()->dailyAt(Setting::get('lembrete_horario', '08:00'))`. Settings: `lembrete_ativo` (default '1') + `lembrete_horario`. Streak em risco quando `streak_last_date == ontem && streakAtual > 0`. 5/5 testes novos; 280/280 suite verde.
+
 ## Fazendo agora
-- Próxima: T6.x — backlog aberto a levantar em sessão de refinamento com o dono.
+- Próxima: T6.12 — Metas semanais.
 
 ## Falta
-- T6.x: backlog aberto — levantar em sessão de refinamento.
+- T6.12 – T6.14 (Fase 6 continuação)
+- T7.1 – T7.4 (NativePHP)
 
 ## Decisões tomadas (resumo; detalhe em docs/adr)
 - Retrieval estruturado antes de vetor (ADR-0001).

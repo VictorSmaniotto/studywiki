@@ -9,6 +9,7 @@ use App\Services\AI\MapaMentalGenerator;
 use App\Services\AI\ResumoGenerator;
 use App\Services\AI\SimuladoGenerator;
 use App\Services\EvolucaoService;
+use App\Services\LacunaService;
 use App\Services\Retrieval\Escopo;
 use Livewire\Component;
 
@@ -132,6 +133,12 @@ class DisciplinaPage extends Component
         }
     }
 
+    public function revisarTopico(string $topico): void
+    {
+        $this->queryResumo = $topico;
+        $this->dispatch('sw-mudar-aba', aba: 'resumo');
+    }
+
     public function render()
     {
         $paginas = $this->disciplina->paginas()
@@ -160,6 +167,7 @@ class DisciplinaPage extends Component
             'tempoVsEstimado' => $evolucao->tempoVsEstimado($slug),
             'distribuicaoQuestoes' => $evolucao->distribuicaoQuestoes($slug),
             'criteriosMaisPerdidos' => $evolucao->criteriosMaisPerdidos($slug),
+            'lacunas' => app(LacunaService::class)->detectar($this->disciplina),
         ])->layout('layouts.app');
     }
 }
