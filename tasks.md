@@ -54,3 +54,20 @@ criado: 2026-06-16
 - [x] T6.7 **Configuração de escopo de geração** — Campo "Focar em tópico" (query semântica livre, opcional) adicionado às abas Resumo, Flashcards e Simulado. Quando preenchido, `Escopo::$query` ativa `forQuery` (retrieval híbrido T4.2). 5 testes novos; 261/261 verdes.
 - [x] T6.8 **Novos templates de resumo + entidade Tema (cross-disciplina)** — Duas partes: (1) Tema: nova entidade no banco, RetrievalService aceita `tema_id` para buscar chunks de múltiplas disciplinas (ex: "POO" cruza Redes + SO). (2) Mapa Mental: IA gera Mermaid mindmap, renderizado com Mermaid.js, ancoragem obrigatória. Templates Cornell/Feynman/SQ3R/Fichamento/ABNT ⚠ REFINAR (decisão IA vs manual pendente). AC: T1..T4 + MM1..MM6 (ROC-38). Depende de T4.3, T6.0.
 - [ ] T6.x **Backlog aberto** ⚠ A LEVANTAR — Outras melhorias identificadas pelo dono durante o uso. Coletar em sessão de refinamento dedicada.
+
+## Fase 7 — App Nativo (NativePHP)
+
+> Branch: `feature/nativephp`. Arquitetura: **API-first**.
+> O backend Sail (Postgres + pgvector + IA) não muda — ganha endpoints REST.
+> Dois apps NativePHP são clientes finos: desktop via `nativephp/electron`, mobile via `nativephp/mobile`.
+> O projeto nativo fica em `../studywiki-native/` (repo separado); o backend fica em `studywiki-app/`.
+>
+> ⚠ **Acesso de rede:** o app mobile não acessa `localhost`. Antes de T7.3, o backend precisa estar acessível na rede local (ex: `192.168.x.x:80`) ou via túnel (Cloudflare Tunnel / ngrok).
+
+- [ ] T7.1 **Camada de API REST** — Adicionar ao backend existente: `routes/api.php` com Sanctum (token pessoal gerado via `php artisan sanctum:token`). Recursos: `GET /api/disciplinas`, `GET /api/disciplinas/{slug}`, `GET /api/disciplinas/{slug}/geracoes`, `POST /api/disciplinas/{slug}/gerar` (body: tipo/params), `GET /api/flashcards/vencidos`, `POST /api/flashcards/{id}/revisar` (body: lembrei bool), `GET /api/trilha`, `GET /api/temas`. Controllers em `app/Http/Controllers/Api/`. Responses JSON com paginação onde aplicável. AC: todos os endpoints retornam JSON válido com Bearer token; 401 sem token; testes Pest para cada controller (sem LLM — mock nos testes de geração).
+
+- [ ] T7.2 **Projeto NativePHP base (desktop)** — Criar `../studywiki-native/` com `laravel new studywiki-native`. Instalar `nativephp/laravel` + `nativephp/electron`. `php artisan native:install`. Criar `ApiClient` service (Http facade, base URL + Bearer token via `.env`: `SW_API_URL`, `SW_API_TOKEN`). SQLite local para cache de gerações e estado SM-2. `config/nativephp.php`: janela 1280×800, título "StudyWiki", ícone. AC: `php artisan native:serve` abre janela nativa; `ApiClient::disciplinas()` retorna dados reais do backend; sem erros de CORS.
+
+- [ ] T7.3 **Views desktop** — Livewire dentro do NativePHP/electron. Layout: sidebar fixa (lista de disciplinas + Trilha + Temas) + área de conteúdo. Telas: `Biblioteca` (search + cards), `DisciplinaPage` (tabs Resumo/Flashcards/Simulado/Mapa Mental — chama API para listar gerações e POST para gerar), `SimuladoPage` (igual ao web, mas state via SQLite local), `Trilha` (streak + flashcards do dia). Atalhos nativos: `CmdOrCtrl+R` refresh, `CmdOrCtrl+G` gerar. AC: fluxo completo funcionando na janela Electron (listar → gerar → responder simulado → revisar flashcard); PDF abre dialog nativo de download.
+
+- [ ] T7.4 **Views mobile + build Android** — Adicionar `nativephp/mobile` ao `studywiki-native`. `php artisan native:install --mobile`. Layout bottom-navigation com 3 abas: **Trilha** (home: streak visual + lista de flashcards do dia), **Disciplinas** (lista → gerar → ler gerações), **Temas** (mapa mental cross-disciplina). Flashcard player: card com frente/verso, swipe ou botões "Lembrei / Esqueci" (chama `POST /api/flashcards/{id}/revisar`). Simulado simplificado: apenas ME, sem PDF. AC: `php artisan native:run android` sobe no emulador; flashcards vencidos aparecem; revisão persiste via API (SM-2 atualizado no backend).
