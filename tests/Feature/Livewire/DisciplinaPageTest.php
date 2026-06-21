@@ -477,3 +477,105 @@ it('passa perfil personalizado com tempo zero quando sem perfil especial', funct
     Livewire::test(DisciplinaPage::class, ['slug' => $disciplina->slug])
         ->call('gerarSimulado');
 });
+
+// ──────────────────────────────────────────────
+// T6.7 — Query semântica nos geradores
+// ──────────────────────────────────────────────
+
+it('passa query semântica ao ResumoGenerator quando preenchida', function () {
+    $disciplina = criarDisciplinaComPaginas();
+
+    $geracao = Geracao::factory()->create([
+        'tipo' => 'resumo',
+        'status' => 'ok',
+        'escopo' => escopoJson($disciplina),
+        'payload' => [],
+    ]);
+
+    $mock = $this->mock(ResumoGenerator::class);
+    $mock->shouldReceive('gerar')
+        ->once()
+        ->with(Mockery::on(fn (Escopo $e) => $e->disciplina === $disciplina->slug && $e->query === 'camada de transporte'))
+        ->andReturn($geracao);
+
+    Livewire::test(DisciplinaPage::class, ['slug' => $disciplina->slug])
+        ->set('queryResumo', 'camada de transporte')
+        ->call('gerarResumo');
+});
+
+it('passa query null ao ResumoGenerator quando campo vazio', function () {
+    $disciplina = criarDisciplinaComPaginas();
+
+    $geracao = Geracao::factory()->create([
+        'tipo' => 'resumo',
+        'status' => 'ok',
+        'escopo' => escopoJson($disciplina),
+        'payload' => [],
+    ]);
+
+    $mock = $this->mock(ResumoGenerator::class);
+    $mock->shouldReceive('gerar')
+        ->once()
+        ->with(Mockery::on(fn (Escopo $e) => $e->query === null))
+        ->andReturn($geracao);
+
+    Livewire::test(DisciplinaPage::class, ['slug' => $disciplina->slug])
+        ->set('queryResumo', '')
+        ->call('gerarResumo');
+});
+
+it('passa query semântica ao FlashcardsGenerator quando preenchida', function () {
+    $disciplina = criarDisciplinaComPaginas();
+
+    $geracao = Geracao::factory()->create([
+        'tipo' => 'flashcards',
+        'status' => 'ok',
+        'escopo' => escopoJson($disciplina),
+        'payload' => ['cards' => []],
+    ]);
+
+    $mock = $this->mock(FlashcardsGenerator::class);
+    $mock->shouldReceive('gerar')
+        ->once()
+        ->with(Mockery::on(fn (Escopo $e) => $e->query === 'endereçamento IP'))
+        ->andReturn($geracao);
+
+    Livewire::test(DisciplinaPage::class, ['slug' => $disciplina->slug])
+        ->set('queryFlashcards', 'endereçamento IP')
+        ->call('gerarFlashcards');
+});
+
+it('passa query semântica ao SimuladoGenerator quando preenchida', function () {
+    $disciplina = criarDisciplinaComPaginas();
+
+    $geracao = Geracao::factory()->create([
+        'tipo' => 'simulado',
+        'status' => 'ok',
+        'escopo' => escopoJson($disciplina),
+        'payload' => ['questoes' => []],
+    ]);
+
+    $mock = $this->mock(SimuladoGenerator::class);
+    $mock->shouldReceive('gerar')
+        ->once()
+        ->with(
+            Mockery::on(fn (Escopo $e) => $e->query === 'camada de aplicação'),
+            Mockery::any(),
+            Mockery::any(),
+            Mockery::any(),
+            Mockery::any(),
+            Mockery::any()
+        )
+        ->andReturn($geracao);
+
+    Livewire::test(DisciplinaPage::class, ['slug' => $disciplina->slug])
+        ->set('querySimulado', 'camada de aplicação')
+        ->call('gerarSimulado');
+});
+
+it('exibe campos de query nos formulários de Resumo, Flashcards e Simulado', function () {
+    $disciplina = criarDisciplinaComPaginas();
+
+    Livewire::test(DisciplinaPage::class, ['slug' => $disciplina->slug])
+        ->assertSee('Focar em tópico');
+});

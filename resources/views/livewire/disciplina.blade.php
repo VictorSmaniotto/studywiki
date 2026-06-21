@@ -37,24 +37,33 @@
     <div x-show="tab === 'resumo'" x-cloak>
         {{-- Gerar novo --}}
         <flux:card class="p-4 mb-6">
-            <div class="flex items-center justify-between gap-4">
-                <div>
-                    <flux:heading size="sm">Gerar novo resumo</flux:heading>
-                    <flux:text size="xs" class="mt-0.5">Bullets ancorados nas fontes da disciplina.</flux:text>
+            <div class="flex flex-col gap-3">
+                <div class="flex items-center justify-between gap-4">
+                    <div>
+                        <flux:heading size="sm">Gerar novo resumo</flux:heading>
+                        <flux:text size="xs" class="mt-0.5">Bullets ancorados nas fontes da disciplina.</flux:text>
+                    </div>
+                    <flux:button
+                        wire:click="gerarResumo"
+                        wire:loading.attr="disabled"
+                        wire:target="gerarResumo"
+                        variant="primary"
+                        size="sm"
+                    >
+                        <span wire:loading.remove wire:target="gerarResumo">Gerar Resumo</span>
+                        <span wire:loading wire:target="gerarResumo" class="flex items-center gap-2">
+                            <flux:icon name="arrow-path" class="w-3.5 h-3.5 animate-spin" />
+                            Gerando…
+                        </span>
+                    </flux:button>
                 </div>
-                <flux:button
-                    wire:click="gerarResumo"
-                    wire:loading.attr="disabled"
-                    wire:target="gerarResumo"
-                    variant="primary"
-                    size="sm"
-                >
-                    <span wire:loading.remove wire:target="gerarResumo">Gerar Resumo</span>
-                    <span wire:loading wire:target="gerarResumo" class="flex items-center gap-2">
-                        <flux:icon name="arrow-path" class="w-3.5 h-3.5 animate-spin" />
-                        Gerando…
-                    </span>
-                </flux:button>
+                <input
+                    wire:model="queryResumo"
+                    type="text"
+                    placeholder="Focar em tópico (opcional — ex: 'camada de transporte')"
+                    class="w-full text-sm border rounded-md px-3 py-1.5 bg-white dark:bg-zinc-900 placeholder-zinc-400"
+                    style="border-color: var(--sw-card-border)"
+                />
             </div>
         </flux:card>
 
@@ -133,24 +142,33 @@
     <div x-show="tab === 'flashcards'" x-cloak>
         {{-- Gerar novo --}}
         <flux:card class="p-4 mb-6">
-            <div class="flex items-center justify-between gap-4">
-                <div>
-                    <flux:heading size="sm">Gerar novos flashcards</flux:heading>
-                    <flux:text size="xs" class="mt-0.5">Pares pergunta-resposta para revisão ativa.</flux:text>
+            <div class="flex flex-col gap-3">
+                <div class="flex items-center justify-between gap-4">
+                    <div>
+                        <flux:heading size="sm">Gerar novos flashcards</flux:heading>
+                        <flux:text size="xs" class="mt-0.5">Pares pergunta-resposta para revisão ativa.</flux:text>
+                    </div>
+                    <flux:button
+                        wire:click="gerarFlashcards"
+                        wire:loading.attr="disabled"
+                        wire:target="gerarFlashcards"
+                        variant="primary"
+                        size="sm"
+                    >
+                        <span wire:loading.remove wire:target="gerarFlashcards">Gerar Flashcards</span>
+                        <span wire:loading wire:target="gerarFlashcards" class="flex items-center gap-2">
+                            <flux:icon name="arrow-path" class="w-3.5 h-3.5 animate-spin" />
+                            Gerando…
+                        </span>
+                    </flux:button>
                 </div>
-                <flux:button
-                    wire:click="gerarFlashcards"
-                    wire:loading.attr="disabled"
-                    wire:target="gerarFlashcards"
-                    variant="primary"
-                    size="sm"
-                >
-                    <span wire:loading.remove wire:target="gerarFlashcards">Gerar Flashcards</span>
-                    <span wire:loading wire:target="gerarFlashcards" class="flex items-center gap-2">
-                        <flux:icon name="arrow-path" class="w-3.5 h-3.5 animate-spin" />
-                        Gerando…
-                    </span>
-                </flux:button>
+                <input
+                    wire:model="queryFlashcards"
+                    type="text"
+                    placeholder="Focar em tópico (opcional — ex: 'endereçamento IP')"
+                    class="w-full text-sm border rounded-md px-3 py-1.5 bg-white dark:bg-zinc-900 placeholder-zinc-400"
+                    style="border-color: var(--sw-card-border)"
+                />
             </div>
         </flux:card>
 
@@ -233,60 +251,69 @@
     <div x-show="tab === 'simulado'" x-cloak>
         {{-- Gerar novo com params --}}
         <flux:card class="p-4 mb-6">
-            <div class="flex items-start justify-between gap-4 flex-wrap">
-                <div>
-                    <flux:heading size="sm">Gerar novo simulado</flux:heading>
-                    <flux:text size="xs" class="mt-0.5">Questões de múltipla escolha com gabarito comentado.</flux:text>
-                </div>
-                <div class="flex items-center gap-2 flex-wrap">
-                    {{-- Perfil --}}
-                    <select wire:model.live="perfil" class="text-sm border rounded-md px-2 py-1.5 bg-white dark:bg-zinc-900" style="border-color: var(--sw-card-border)">
-                        <option value="personalizado">Personalizado</option>
-                        <option value="universitario">Universitário (~36 min)</option>
-                        <option value="vestibular">Vestibular (~120 min)</option>
-                    </select>
-                    <select wire:model="dificuldade" class="text-sm border rounded-md px-2 py-1.5 bg-white dark:bg-zinc-900" style="border-color: var(--sw-card-border)">
-                        <option value="facil">Fácil</option>
-                        <option value="medio">Médio</option>
-                        <option value="dificil">Difícil</option>
-                    </select>
-                    <div class="flex items-center gap-1">
-                        <input
-                            wire:model="nQuestoes"
-                            type="number"
-                            min="0"
-                            max="20"
-                            class="w-14 text-sm border rounded-md px-2 py-1.5 bg-white dark:bg-zinc-900"
-                            style="border-color: var(--sw-card-border)"
-                            title="Questões ME"
-                        />
-                        <flux:text size="xs" style="color: var(--sw-muted-text)">ME</flux:text>
-                        <span class="text-zinc-400">+</span>
-                        <input
-                            wire:model="nDissertativas"
-                            type="number"
-                            min="0"
-                            max="10"
-                            class="w-14 text-sm border rounded-md px-2 py-1.5 bg-white dark:bg-zinc-900"
-                            style="border-color: var(--sw-card-border)"
-                            title="Questões dissertativas"
-                        />
-                        <flux:text size="xs" style="color: var(--sw-muted-text)">Dis</flux:text>
+            <div class="flex flex-col gap-3">
+                <div class="flex items-start justify-between gap-4 flex-wrap">
+                    <div>
+                        <flux:heading size="sm">Gerar novo simulado</flux:heading>
+                        <flux:text size="xs" class="mt-0.5">Questões de múltipla escolha com gabarito comentado.</flux:text>
                     </div>
-                    <flux:button
-                        wire:click="gerarSimulado"
-                        wire:loading.attr="disabled"
-                        wire:target="gerarSimulado"
-                        variant="primary"
-                        size="sm"
-                    >
-                        <span wire:loading.remove wire:target="gerarSimulado">Gerar Simulado</span>
-                        <span wire:loading wire:target="gerarSimulado" class="flex items-center gap-2">
-                            <flux:icon name="arrow-path" class="w-3.5 h-3.5 animate-spin" />
-                            Gerando…
-                        </span>
-                    </flux:button>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        {{-- Perfil --}}
+                        <select wire:model.live="perfil" class="text-sm border rounded-md px-2 py-1.5 bg-white dark:bg-zinc-900" style="border-color: var(--sw-card-border)">
+                            <option value="personalizado">Personalizado</option>
+                            <option value="universitario">Universitário (~36 min)</option>
+                            <option value="vestibular">Vestibular (~120 min)</option>
+                        </select>
+                        <select wire:model="dificuldade" class="text-sm border rounded-md px-2 py-1.5 bg-white dark:bg-zinc-900" style="border-color: var(--sw-card-border)">
+                            <option value="facil">Fácil</option>
+                            <option value="medio">Médio</option>
+                            <option value="dificil">Difícil</option>
+                        </select>
+                        <div class="flex items-center gap-1">
+                            <input
+                                wire:model="nQuestoes"
+                                type="number"
+                                min="0"
+                                max="20"
+                                class="w-14 text-sm border rounded-md px-2 py-1.5 bg-white dark:bg-zinc-900"
+                                style="border-color: var(--sw-card-border)"
+                                title="Questões ME"
+                            />
+                            <flux:text size="xs" style="color: var(--sw-muted-text)">ME</flux:text>
+                            <span class="text-zinc-400">+</span>
+                            <input
+                                wire:model="nDissertativas"
+                                type="number"
+                                min="0"
+                                max="10"
+                                class="w-14 text-sm border rounded-md px-2 py-1.5 bg-white dark:bg-zinc-900"
+                                style="border-color: var(--sw-card-border)"
+                                title="Questões dissertativas"
+                            />
+                            <flux:text size="xs" style="color: var(--sw-muted-text)">Dis</flux:text>
+                        </div>
+                        <flux:button
+                            wire:click="gerarSimulado"
+                            wire:loading.attr="disabled"
+                            wire:target="gerarSimulado"
+                            variant="primary"
+                            size="sm"
+                        >
+                            <span wire:loading.remove wire:target="gerarSimulado">Gerar Simulado</span>
+                            <span wire:loading wire:target="gerarSimulado" class="flex items-center gap-2">
+                                <flux:icon name="arrow-path" class="w-3.5 h-3.5 animate-spin" />
+                                Gerando…
+                            </span>
+                        </flux:button>
+                    </div>
                 </div>
+                <input
+                    wire:model="querySimulado"
+                    type="text"
+                    placeholder="Focar em tópico (opcional — ex: 'camada de aplicação HTTP')"
+                    class="w-full text-sm border rounded-md px-3 py-1.5 bg-white dark:bg-zinc-900 placeholder-zinc-400"
+                    style="border-color: var(--sw-card-border)"
+                />
             </div>
         </flux:card>
 

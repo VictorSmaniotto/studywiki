@@ -1,7 +1,7 @@
 ---
 titulo: Progresso (estado da obra)
 tipo: progress
-atualizado: 2026-06-18 (sessão 8)
+atualizado: 2026-06-20 (sessão 10)
 ---
 
 # Progresso
@@ -59,11 +59,13 @@ atualizado: 2026-06-18 (sessão 8)
 
 - **T6.8** — Entidade `Tema` (cross-disciplina) + `MapaMentalGenerator`. Migration `temas` + pivot `disciplina_tema` (many-to-many com `Disciplina`). `Escopo` ganhou `?int $temaId`; `RetrievalService::applyEscopoFilters` usa join em `disciplina_tema` para buscar chunks de múltiplas disciplinas. Migration adiciona `mapa_mental` ao check constraint `geracoes_tipo_check` (era enum fixo). `MapaMentalGenerator` gera Mermaid mindmap ancorado via Prism; `gerarMermaidCode()` converte nós estruturados em sintaxe `mindmap`. `DisciplinaPage` ganhou aba "Mapa Mental" + `gerarMapaMental()`. Mermaid.js 11 instalado via npm e exposto em `window.mermaid`. `TemaResource` Filament com form/table (`Filament\Schemas\Schema` — Filament 5 não usa `Filament\Forms\Form`). 19 testes novos; 256/256 suite verde.
 
+- **T6.6** — Sem escopo residual. Histórico de gerações já coberto integralmente por T6.0 (foreach em todas as gerações por tipo na DisciplinaPage).
+- **T6.7** — Query semântica nos geradores. `DisciplinaPage` ganhou `queryResumo`, `queryFlashcards`, `querySimulado` (string). Quando preenchidos, `Escopo::$query` é passado → `AbstractGenerator` despacha para `forQuery` (retrieval híbrido T4.2). Campo "Focar em tópico" adicionado nos cards de Resumo, Flashcards e Simulado. 5 testes novos; 261/261 suite verde.
+
 ## Fazendo agora
-- Próxima: T6.6 / T6.7 são cobertos por T6.0. T6.x: backlog aberto a levantar.
+- Próxima: T6.x — backlog aberto a levantar em sessão de refinamento com o dono.
 
 ## Falta
-- T6.6, T6.7: cobertos por T6.0 — verificar se há escopo residual.
 - T6.x: backlog aberto — levantar em sessão de refinamento.
 
 ## Decisões tomadas (resumo; detalhe em docs/adr)

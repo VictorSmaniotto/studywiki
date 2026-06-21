@@ -34,6 +34,12 @@ class DisciplinaPage extends Component
 
     public array $expandidos = [];
 
+    public string $queryResumo = '';
+
+    public string $queryFlashcards = '';
+
+    public string $querySimulado = '';
+
     public function mount(string $slug): void
     {
         $this->disciplina = Disciplina::where('slug', $slug)->firstOrFail();
@@ -60,7 +66,7 @@ class DisciplinaPage extends Component
         $this->erroResumo = '';
 
         $geracao = app(ResumoGenerator::class)->gerar(
-            new Escopo(disciplina: $this->disciplina->slug)
+            new Escopo(disciplina: $this->disciplina->slug, query: $this->queryResumo ?: null)
         );
 
         if ($geracao->status === 'ok') {
@@ -75,7 +81,7 @@ class DisciplinaPage extends Component
         $this->erroFlashcards = '';
 
         $geracao = app(FlashcardsGenerator::class)->gerar(
-            new Escopo(disciplina: $this->disciplina->slug)
+            new Escopo(disciplina: $this->disciplina->slug, query: $this->queryFlashcards ?: null)
         );
 
         if ($geracao->status === 'ok') {
@@ -96,7 +102,7 @@ class DisciplinaPage extends Component
         };
 
         $geracao = app(SimuladoGenerator::class)->gerar(
-            new Escopo(disciplina: $this->disciplina->slug),
+            new Escopo(disciplina: $this->disciplina->slug, query: $this->querySimulado ?: null),
             $this->nQuestoes,
             $this->nDissertativas,
             $this->dificuldade,
