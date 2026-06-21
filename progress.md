@@ -55,11 +55,16 @@ atualizado: 2026-06-18 (sessão 8)
 
 - **T6.4** — Gráficos de evolução de conhecimento. `EvolucaoService` com 5 métodos (scoresPorSessao, errosPorTopico, tempoVsEstimado, distribuicaoQuestoes, criteriosMaisPerdidos). Aba "Evolução" adicionada à DisciplinaPage com 5 Chart.js charts (linha, 2×barra horizontal, donut, barra full-width). Chart.js 4.5 instalado via npm e bundlado no app.js (window.Chart). DesempenhoDashboard admin ganhou getDadosGraficosGlobais + 2 gráficos. Bug corrigido: ROUND(double precision, int) não existe no Postgres — cast para ::numeric necessário. 16 testes novos; 219/219 suite verde.
 
+- **T6.5** — Trilha de estudos e cronograma diário. `TrilhaService` com `flashcardsVencidos()` (SM-2, integra T5.1), `topicosPrioritarios()` (cross-disciplina, herda lógica de T6.4 sem filtro de slug), `streakAtual()` e `registrarSessao()` (streak em `settings`). Livewire `Trilha` + view Flux. Rota `/trilha` + link "Trilha" no navbar. Streak: sessão de hoje ou ontem mantém; gap ≥2 dias zera. 18 testes novos; 237/237 suite verde.
+
+- **T6.8** — Entidade `Tema` (cross-disciplina) + `MapaMentalGenerator`. Migration `temas` + pivot `disciplina_tema` (many-to-many com `Disciplina`). `Escopo` ganhou `?int $temaId`; `RetrievalService::applyEscopoFilters` usa join em `disciplina_tema` para buscar chunks de múltiplas disciplinas. Migration adiciona `mapa_mental` ao check constraint `geracoes_tipo_check` (era enum fixo). `MapaMentalGenerator` gera Mermaid mindmap ancorado via Prism; `gerarMermaidCode()` converte nós estruturados em sintaxe `mindmap`. `DisciplinaPage` ganhou aba "Mapa Mental" + `gerarMapaMental()`. Mermaid.js 11 instalado via npm e exposto em `window.mermaid`. `TemaResource` Filament com form/table (`Filament\Schemas\Schema` — Filament 5 não usa `Filament\Forms\Form`). 19 testes novos; 256/256 suite verde.
+
 ## Fazendo agora
-- Próxima: T6.5 (⚠ REFINAR antes de implementar)
+- Próxima: T6.6 / T6.7 são cobertos por T6.0. T6.x: backlog aberto a levantar.
 
 ## Falta
-- T6.5–T6.x conforme `tasks.md` (T6.0–T6.4 concluídos; T6.5 marcado como REFINAR).
+- T6.6, T6.7: cobertos por T6.0 — verificar se há escopo residual.
+- T6.x: backlog aberto — levantar em sessão de refinamento.
 
 ## Decisões tomadas (resumo; detalhe em docs/adr)
 - Retrieval estruturado antes de vetor (ADR-0001).

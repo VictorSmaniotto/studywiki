@@ -12,10 +12,11 @@
     {{-- Tab nav --}}
     <div class="flex gap-1 border-b mb-6" style="border-color: var(--sw-card-border)">
         @foreach([
-            'resumo'     => ['label' => 'Resumo', 'icon' => 'document-text'],
-            'flashcards' => ['label' => 'Flashcards', 'icon' => 'rectangle-stack'],
-            'simulado'   => ['label' => 'Simulado', 'icon' => 'clipboard-document-check'],
-            'evolucao'   => ['label' => 'Evolução', 'icon' => 'chart-bar'],
+            'resumo'      => ['label' => 'Resumo', 'icon' => 'document-text'],
+            'flashcards'  => ['label' => 'Flashcards', 'icon' => 'rectangle-stack'],
+            'simulado'    => ['label' => 'Simulado', 'icon' => 'clipboard-document-check'],
+            'mapa_mental' => ['label' => 'Mapa Mental', 'icon' => 'share'],
+            'evolucao'    => ['label' => 'Evolução', 'icon' => 'chart-bar'],
         ] as $key => $item)
             <button
                 @click="tab = '{{ $key }}'"
@@ -536,6 +537,104 @@
                     </flux:card>
                 @endif
 
+            </div>
+        @endif
+    </div>
+
+    {{-- Tab: Mapa Mental --}}
+    <div x-show="tab === 'mapa_mental'" x-cloak>
+        <flux:card class="p-4 mb-6">
+            <div class="flex items-center justify-between gap-4">
+                <div>
+                    <flux:heading size="sm">Gerar novo mapa mental</flux:heading>
+                    <flux:text size="xs" class="mt-0.5">Mindmap Mermaid ancorado nas fontes da disciplina.</flux:text>
+                </div>
+                <flux:button
+                    wire:click="gerarMapaMental"
+                    wire:loading.attr="disabled"
+                    wire:target="gerarMapaMental"
+                    variant="primary"
+                    size="sm"
+                >
+                    <span wire:loading.remove wire:target="gerarMapaMental">Gerar Mapa Mental</span>
+                    <span wire:loading wire:target="gerarMapaMental" class="flex items-center gap-2">
+                        <flux:icon name="arrow-path" class="w-3.5 h-3.5 animate-spin" />
+                        Gerando…
+                    </span>
+                </flux:button>
+            </div>
+        </flux:card>
+
+        @if($erroMapaMental)
+            <flux:callout variant="danger" icon="exclamation-triangle" class="mb-4">
+                {{ $erroMapaMental }}
+            </flux:callout>
+        @endif
+
+        @if($geracoesMapaMental->isEmpty())
+            <flux:text size="sm" class="text-zinc-400">Nenhum mapa mental gerado ainda.</flux:text>
+        @else
+            <div class="space-y-3">
+                @foreach($geracoesMapaMental as $ger)
+                    @php $expandido = in_array($ger->id, $expandidos); @endphp
+                    <flux:card>
+                        <div
+                            wire:click="toggleExpandir({{ $ger->id }})"
+                            class="flex items-center justify-between p-4 cursor-pointer select-none"
+                        >
+                            <div class="flex items-center gap-3">
+                                <flux:icon name="share" class="w-5 h-5" style="color: var(--sw-muted)" />
+                                <div>
+                                    <flux:text size="sm" class="font-medium">
+                                        {{ $ger->payload['titulo'] ?? 'Mapa mental' }}
+                                    </flux:text>
+                                    <flux:text size="xs" style="color: var(--sw-muted)">
+                                        {{ $ger->created_at->format('d/m/Y H:i') }}
+                                        · {{ $ger->custo_tokens }} tokens
+                                        · <flux:badge size="xs" color="{{ $ger->status === 'ok' ? 'green' : 'red' }}">{{ $ger->status }}</flux:badge>
+                                    </flux:text>
+                                </div>
+                            </div>
+                            <flux:icon name="{{ $expandido ? 'chevron-up' : 'chevron-down' }}" class="w-4 h-4" style="color: var(--sw-muted)" />
+                        </div>
+
+                        @if($expandido && $ger->status === 'ok')
+                            <div class="border-t px-4 pb-4 pt-3" style="border-color: var(--sw-card-border)">
+                                @php
+                                    $mermaidCode = \App\Services\AI\MapaMentalGenerator::gerarMermaidCode(
+                                        $ger->payload['titulo'] ?? 'Tema',
+                                        $ger->payload['nos'] ?? []
+                                    );
+                                @endphp
+                                <div
+                                    x-data="{ rendered: false }"
+                                    x-init="$nextTick(() => {
+                                        if (!rendered && window.mermaid) {
+                                            window.mermaid.run({ nodes: [$el.querySelector('.mermaid')] });
+                                            rendered = true;
+                                        }
+                                    })"
+                                    class="overflow-x-auto"
+                                >
+                                    <div class="mermaid text-sm">{{ $mermaidCode }}</div>
+                                </div>
+
+                                @if($ger->fontes->isNotEmpty())
+                                    <div class="mt-3 pt-3 border-t" style="border-color: var(--sw-card-border)">
+                                        <flux:text size="xs" class="font-medium mb-1" style="color: var(--sw-muted)">Fontes:</flux:text>
+                                        <div class="flex flex-wrap gap-1">
+                                            @foreach($ger->fontes as $fonte)
+                                                @if($fonte->pagina)
+                                                    <flux:badge size="xs" color="zinc">{{ $fonte->pagina->titulo }}</flux:badge>
+                                                @endif
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+                        @endif
+                    </flux:card>
+                @endforeach
             </div>
         @endif
     </div>

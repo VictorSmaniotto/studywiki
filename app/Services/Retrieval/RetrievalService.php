@@ -181,7 +181,11 @@ class RetrievalService
 
     private function applyEscopoFilters(Builder $query, Escopo $escopo): void
     {
-        if ($escopo->disciplina !== null) {
+        if ($escopo->temaId !== null) {
+            $query->join('disciplinas', 'disciplinas.id', '=', 'paginas.disciplina_id')
+                ->join('disciplina_tema', 'disciplina_tema.disciplina_id', '=', 'disciplinas.id')
+                ->where('disciplina_tema.tema_id', $escopo->temaId);
+        } elseif ($escopo->disciplina !== null) {
             $slug = Str::slug($escopo->disciplina);
             $query->join('disciplinas', 'disciplinas.id', '=', 'paginas.disciplina_id')
                 ->where('disciplinas.slug', $slug);

@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Models\Disciplina;
 use App\Models\Geracao;
 use App\Services\AI\FlashcardsGenerator;
+use App\Services\AI\MapaMentalGenerator;
 use App\Services\AI\ResumoGenerator;
 use App\Services\AI\SimuladoGenerator;
 use App\Services\EvolucaoService;
@@ -20,6 +21,8 @@ class DisciplinaPage extends Component
     public string $erroFlashcards = '';
 
     public string $erroSimulado = '';
+
+    public string $erroMapaMental = '';
 
     public string $perfil = 'personalizado';
 
@@ -108,6 +111,21 @@ class DisciplinaPage extends Component
         }
     }
 
+    public function gerarMapaMental(): void
+    {
+        $this->erroMapaMental = '';
+
+        $geracao = app(MapaMentalGenerator::class)->gerar(
+            new Escopo(disciplina: $this->disciplina->slug)
+        );
+
+        if ($geracao->status === 'ok') {
+            $this->expandidos[] = $geracao->id;
+        } else {
+            $this->erroMapaMental = 'Geração rejeitada: conteúdo insuficiente para ancoragem. Tente novamente.';
+        }
+    }
+
     public function render()
     {
         $paginas = $this->disciplina->paginas()
@@ -130,6 +148,7 @@ class DisciplinaPage extends Component
             'geracoesResumo' => $carregar('resumo'),
             'geracoesFlashcards' => $carregar('flashcards'),
             'geracoesSimulado' => $carregar('simulado'),
+            'geracoesMapaMental' => $carregar('mapa_mental'),
             'scoresPorSessao' => $evolucao->scoresPorSessao($slug),
             'errosPorTopico' => $evolucao->errosPorTopico($slug),
             'tempoVsEstimado' => $evolucao->tempoVsEstimado($slug),

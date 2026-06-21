@@ -13,10 +13,11 @@ class Escopo
         public readonly array $tags = [],
         public readonly array $paginas = [],
         public readonly ?string $query = null,
+        public readonly ?int $temaId = null,
     ) {}
 
     public function vazio(): bool
     {
-        return $this->disciplina === null && $this->tags === [] && $this->paginas === [];
+        return $this->disciplina === null && $this->tags === [] && $this->paginas === [] && $this->temaId === null;
     }
 }

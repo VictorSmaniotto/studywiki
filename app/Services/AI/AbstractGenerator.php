@@ -82,6 +82,7 @@ abstract class AbstractGenerator
             'tags' => $escopo->tags,
             'paginas' => $escopo->paginas,
             'query' => $escopo->query,
+            'tema_id' => $escopo->temaId,
         ];
     }
 
