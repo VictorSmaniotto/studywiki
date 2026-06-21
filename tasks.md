@@ -82,3 +82,35 @@ criado: 2026-06-16
 
 - [ ] T7.4 **Views mobile + build Android** — Adicionar `nativephp/mobile` ao `studywiki-native`. `php artisan native:install --mobile`. Layout bottom-navigation com 3 abas: **Trilha** (home: streak visual + lista de flashcards do dia), **Disciplinas** (lista → gerar → ler gerações), **Temas** (mapa mental cross-disciplina). Flashcard player: card com frente/verso, swipe ou botões "Lembrei / Esqueci" (chama `POST /api/flashcards/{id}/revisar`). Simulado simplificado: apenas ME, sem PDF. AC: `php artisan native:run android` sobe no emulador; flashcards vencidos aparecem; revisão persiste via API (SM-2 atualizado no backend).
   - [ ] T7.4.1 **Acesso de rede para o mobile** — O app mobile não acessa `localhost`. Configurar acesso ao backend via IP da rede local (`192.168.x.x`) ou túnel permanente (Cloudflare Tunnel, gratuito). `SW_API_URL` no `.env` do `studywiki-native` aponta para o endereço acessível. AC: app no emulador/dispositivo físico consegue chamar `GET /api/disciplinas` e receber resposta real.
+
+## Fase 6 — Continuação (features pessoais adicionais)
+
+- [ ] T6.15 **Exportar flashcards para Anki** — Gerar arquivo `.apkg` (formato Anki) a partir de um deck de flashcards gerado. Usar `\Moxio\AnkiConnect` ou gerar o SQLite do pacote manualmente (formato documentado). Botão "Exportar para Anki" na aba Flashcards da `DisciplinaPage`. AC: arquivo `.apkg` importa no Anki Desktop sem erros; frente/verso e fontes preservados; 5 testes Pest.
+
+- [ ] T6.16 **OCR em imagens da vault** — Durante o sync, detectar imagens referenciadas nos markdowns (`![[img.png]]`), extrair texto via `thiagoalessio/tesseract_ocr` (Tesseract PHP wrapper), anexar o texto extraído ao chunk da seção que contém a imagem. AC: página com diagrama/print tem texto do OCR no chunk correspondente; re-sync não re-processa imagens inalteradas; 6 testes Pest.
+
+- [ ] T6.17 **Suporte a LaTeX / equações** — Renderizar equações LaTeX nos flashcards e simulados usando MathJax (CDN, carregado via `app.blade.php`). No gerador, instruir o LLM a preservar delimitadores `$...$` e `$$...$$` nos enunciados. AC: flashcard com equação renderiza corretamente no browser; equação no enunciado de simulado não quebra o layout; PDF exportado inclui equação como imagem (DomPDF + MathJax pré-renderizado via Puppeteer ou fallback texto).
+
+- [ ] T6.18 **Calendário de provas** — Usuário cadastra datas de prova por disciplina (`provas` table: disciplina_id, data, descricao). `TrilhaService` pondera tópicos prioritários pela proximidade da prova (peso cresce na última semana). Widget no dashboard da Trilha mostra contagem regressiva. AC: disciplina com prova em 3 dias aparece no topo da Trilha independente de taxa de erro; 6 testes Pest.
+
+- [ ] T6.19 **Modo grupo — compartilhar deck/simulado via link** — Gerar token único para uma `Geracao` (flashcards ou simulado). Link público `/compartilhar/{token}` exibe o conteúdo sem login, permite fazer o simulado e ver o gabarito, mas não salva progresso. Expira em 7 dias. AC: link funciona sem autenticação; expirado retorna 410; resultados não poluem o histórico do dono; 5 testes Pest.
+
+## Fase 8 — SaaS / Produto Monetizado
+
+> ⚠ **Virada arquitetural grande** — requer ~15–20 tasks tocando todas as camadas.
+> Pré-requisito: produto pessoal validado no uso real. Implementar somente se decidir abrir para outros usuários.
+> Diferencial de mercado: `GroundingValidator` determinístico — nenhum concorrente (Anki, Quizlet, Notion AI, ChatPDF) garante ancoragem. Foco em medicina, direito e engenharia.
+
+- [ ] T8.1 **Auth multi-usuário** — Instalar Laravel Breeze (Livewire stack) + Socialite (Google). Cada usuário tem seu próprio escopo de dados. `user_id` em `disciplinas`, `paginas`, `chunks`, `geracoes`, `flashcards`, `resposta_simulados`. Migration de multi-tenancy com foreign keys. AC: dois usuários isolados não veem dados um do outro; login via Google funciona.
+
+- [ ] T8.2 **Upload de vault** — Substituir `OBSIDIAN_VAULT_PATH` (filesystem local) por upload de arquivo ZIP de markdown. `VaultUploadService` extrai, valida (só `.md`) e armazena em S3 (`league/flysystem-aws-s3-v3`). `studywiki:sync` passa a ler do S3 para o usuário autenticado. AC: upload de 50 arquivos `.md` sincroniza corretamente; vault de outro usuário é inacessível; arquivos não-md são ignorados.
+
+- [ ] T8.3 **Planos e billing (Stripe + Cashier)** — Planos: Gratuito (20 gerações/mês, sem simulado dissertativo), Estudante R$29/mês (200 gerações, tudo), Pro R$59/mês (ilimitado + suporte). `UsageService` rastreia gerações por usuário/mês (já temos token count). Middleware `CheckPlanLimit` barra geração quando cota esgotada. Webhooks Stripe para ativar/cancelar plano. AC: usuário gratuito bloqueado na 21ª geração; upgrade imediato libera; cancelamento no Stripe reflete em ≤ 5min.
+
+- [ ] T8.4 **Fila robusta com Horizon** — Mover todas as chamadas LLM para jobs (`GenerateJob`, `EmbedJob`). `php artisan horizon` gerencia workers. Usuário vê status em tempo real via Livewire polling (`pendente → processando → concluído`). Prioridade de fila por plano (Pro > Estudante > Gratuito). AC: geração não bloqueia request HTTP; falha no job notifica o usuário via email; Horizon dashboard no admin Filament.
+
+- [ ] T8.5 **Landing page e onboarding** — Página `/` pública com proposta de valor (ancoragem, sem alucinação), demo em vídeo, comparativo com concorrentes, CTA para cadastro. Onboarding guiado pós-cadastro: (1) upload da vault, (2) sync, (3) gerar primeiro resumo. AC: página carrega em < 2s; onboarding de 3 passos completa sem suporte; taxa de ativação (primeiro resumo gerado) mensurável via evento.
+
+- [ ] T8.6 **Observabilidade e analytics de produto** — Integrar Plausible (privacy-first) para pageviews. Eventos internos: `geração_criada`, `simulado_concluído`, `flashcard_revisado`, `plano_upgraded`. Dashboard admin com MRR, churn, gerações/usuário/mês, taxa de rejeição do validador por plano. AC: eventos chegam em tempo real; nenhum dado pessoal vaza para terceiros.
+
+- [ ] T8.7 **Suporte e documentação** — Página `/docs` com guia de formato da vault (frontmatter esperado, estrutura de headings), FAQ de ancoragem ("por que minha questão foi rejeitada?"), changelog público. Formulário de suporte que abre issue no Linear. AC: docs acessíveis sem login; changelog atualizado a cada release.
