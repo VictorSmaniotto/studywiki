@@ -67,20 +67,25 @@ criado: 2026-06-16
 
 ## Fase 7 — App Nativo (NativePHP)
 
-> Branch: `feature/nativephp`. Arquitetura: **monorepo** — NativePHP instalado diretamente no `studywiki-app`.
-> O backend Sail (Postgres + pgvector + IA) não muda. As views Livewire existentes são reaproveitadas sem reescrita.
-> Desktop via `nativephp/desktop` ^2 · Mobile via `nativephp/mobile` ^3. Ambos suportam Laravel 13.
-> Sem projeto separado `studywiki-native` (foi descartado: adicionaria complexidade sem ganho para uso pessoal).
+> Arquitetura: **1 núcleo + 3 cascas em branches separados** (ADR-0003, supera o "monorepo"):
+> `main` (Web) · `feature/nativephp` (Desktop, `nativephp/desktop` ^2) · `feature/nativephp-mobile` (Mobile, `nativephp/mobile` ^3).
+> Desktop e mobile **têm `conflict` no Composer — não coexistem**. Guia de trabalho entre branches: `docs/nativephp.md`.
+> O backend Sail (Postgres + pgvector + IA) não muda; as views Livewire são reaproveitadas. Sem projeto separado `studywiki-native`.
 >
 > ⚠ **Banco de dados nativo:** NativePHP empacota o PHP na janela/APK, mas não o Postgres. Para o desktop, o app conecta ao Sail rodando localmente (dev) ou usa SQLite em produção standalone. Para mobile, o app usa SQLite — adaptar `DB_CONNECTION` via `NATIVEPHP_RUNNING` env quando necessário.
 
 - [x] T7.1 **Camada de API REST** — Adicionar ao backend existente: `routes/api.php` com Sanctum (token pessoal gerado via `php artisan sanctum:token`). Recursos: `GET /api/disciplinas`, `GET /api/disciplinas/{slug}`, `GET /api/disciplinas/{slug}/geracoes`, `POST /api/disciplinas/{slug}/gerar` (body: tipo/params), `GET /api/flashcards/vencidos`, `POST /api/flashcards/{id}/revisar` (body: lembrei bool), `GET /api/trilha`, `GET /api/temas`. Controllers em `app/Http/Controllers/Api/`. Responses JSON com paginação onde aplicável. AC: todos os endpoints retornam JSON válido com Bearer token; 401 sem token; testes Pest para cada controller (sem LLM — mock nos testes de geração).
 
-- [ ] T7.2 **NativePHP base (desktop)** — No `studywiki-app`, instalar `nativephp/desktop` ^2 (`composer require nativephp/desktop`). Rodar `php artisan native:install`. Configurar `config/nativephp.php`: janela 1280×800, título "StudyWiki", ícone. Apagar `../studywiki-native/` criado por engano (rodar manualmente: `rm -rf ../studywiki-native`). AC: `php artisan native:run` abre janela Electron com o app carregando; as views Livewire existentes (Disciplinas, Trilha, Chat, Metas) funcionam sem erros; sem tela branca.
+- [x] T7.2 **NativePHP base (desktop)** — *(branch `feature/nativephp`)* `nativephp/desktop` ^2 + `native:install`. `config/nativephp.php`: janela 1280×800, título "StudyWiki", `app_id` `com.rockandcode.studywiki`. AC de GUI (`native:run` abre a janela Electron) verificado **manualmente no host** — não roda na sandbox. Lógica coberta por testes; 311/311 verde.
 
-- [ ] T7.3 **Ajustes de experiência desktop** — Atalhos de teclado nativos via `Menu` facade do NativePHP: `CmdOrCtrl+R` (refresh), `CmdOrCtrl+G` (foco no form gerar). Título da janela dinâmico por rota. Download de PDF via dialog nativo (`NativeDialog`). AC: atalhos funcionam na janela Electron; PDF exporta via diálogo nativo do OS.
+- [x] T7.3 **Ajustes de experiência desktop** — *(branch `feature/nativephp`)* Menu nativo com atalhos `CmdOrCtrl+R` (reload), `CmdOrCtrl+1..4` (navegação), `CmdOrCtrl+G` (foco no form gerar via evento `focus-gerar`). Título dinâmico por rota. PDF via `Native\Desktop\Dialog->save()` (fallback web). 3 testes; AC de GUI verificado manualmente no host.
 
-- [ ] T7.4 **Mobile + build Android** — Instalar `nativephp/mobile` ^3 no `studywiki-app` (`composer require nativephp/mobile`). `php artisan native:install`. Adaptar `config/database.php` para usar SQLite quando `NATIVEPHP_RUNNING=true`. Criar layout mobile com bottom-navigation (3 abas: **Trilha**, **Disciplinas**, **Temas**). Flashcard player: swipe ou botões "Lembrei / Esqueci". Simulado simplificado: apenas ME, sem PDF. AC: `php artisan native:run android` sobe no emulador; Trilha carrega; revisão de flashcard persiste (SM-2 via SQLite local).
+- [ ] T7.4 **Mobile + build Android** — *(branch `feature/nativephp-mobile`)*
+  - [x] Instalar `nativephp/mobile` ^3; provider registrado; `config/database.php` → SQLite quando `NATIVEPHP_RUNNING` (dados offline; IA/retrieval via API REST).
+  - [ ] Layout mobile com bottom-navigation (3 abas: **Trilha**, **Disciplinas**, **Temas**).
+  - [ ] Flashcard player: swipe ou botões "Lembrei / Esqueci".
+  - [ ] Simulado simplificado: apenas ME, sem PDF.
+  - AC: `php artisan native:run android` sobe no emulador (**rodar do Windows, não do WSL**); Trilha carrega; revisão de flashcard persiste (SM-2 via SQLite local).
   - [ ] T7.4.1 **Acesso de rede para emulador/dispositivo** — Em desenvolvimento, o emulador Android não acessa `localhost` do host. Configurar `APP_URL` com IP da rede local (`192.168.x.x`) ou túnel (Cloudflare Tunnel). AC: emulador consegue carregar o app e realizar operações que dependem do Sail (LLM, sync).
 
 ## Fase 6 — Continuação (features pessoais adicionais)
