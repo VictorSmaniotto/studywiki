@@ -32,6 +32,16 @@ App que transforma uma vault Obsidian de estudos (markdown + frontmatter) em uma
 - `docs/adr/` — decisões que envelhecem (imutáveis; supersede com ADR novo).
 - Código: padrão Laravel. Lógica de IA em `app/Services/AI/`. Retrieval em `app/Services/Retrieval/`. Ingestão em `app/Console/Commands/`.
 
+## Plataformas e branches (Web · Desktop · Mobile) — LEIA antes de alterar código
+O app roda em três cascas sobre **um núcleo compartilhado**. Guia completo: `docs/nativephp.md` · decisão: `docs/adr/0003-nativephp-branches-desktop-mobile.md`.
+- `main` → **Web** (núcleo Laravel/Livewire, sem NativePHP, Postgres+pgvector).
+- `feature/nativephp` → **Desktop** (núcleo + `nativephp/desktop` ^2).
+- `feature/nativephp-mobile` → **Mobile** (núcleo + `nativephp/mobile` ^3, SQLite offline + API).
+- **Desktop e mobile NÃO coexistem** (têm `conflict` no Composer) — por isso branches separados.
+- **Regra de ouro:** mudança de **núcleo** (tela, service, model, API) entra na base e é **propagada aos branches** (`rebase`/`merge` + `composer install`). Código **específico de plataforma** fica só no branch dele.
+- **Nunca importe `Native\Desktop\…`/`Native\Mobile\…` em código de núcleo** — quebra o autoload nos outros branches. Proteja recursos nativos com `config('nativephp-internal.running')` e resolva via `app(...)` no branch da plataforma.
+- **Ao trocar entre `feature/nativephp` e `feature/nativephp-mobile`, rode `./vendor/bin/sail composer install`** (o `vendor/` precisa refletir o pacote daquele branch).
+
 ## Comandos úteis
 `./vendor/bin/sail artisan studywiki:sync` · `./vendor/bin/sail artisan test` · `./vendor/bin/sail artisan studywiki:simulado {disciplina}` · `./vendor/bin/sail artisan studywiki:embed` (Fase 4).
 
