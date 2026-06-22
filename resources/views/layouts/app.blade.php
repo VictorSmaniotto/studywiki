@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StudyWiki</title>
+    <title>{{ isset($title) ? $title . ' · StudyWiki' : 'StudyWiki' }}</title>
     @fluxAppearance
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
@@ -54,6 +54,12 @@
             </flux:navbar.item>
             <flux:navbar.item href="{{ route('trilha') }}" :current="request()->routeIs('trilha')">
                 Trilha
+            </flux:navbar.item>
+            <flux:navbar.item href="{{ route('metas') }}" :current="request()->routeIs('metas')">
+                Metas
+            </flux:navbar.item>
+            <flux:navbar.item href="{{ route('chat') }}" :current="request()->routeIs('chat')">
+                Chat
             </flux:navbar.item>
         </flux:navbar>
 
