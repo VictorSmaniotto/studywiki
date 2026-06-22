@@ -68,6 +68,6 @@ class Chat extends Component
     {
         return view('livewire.chat', [
             'disciplinas' => Disciplina::orderBy('nome')->get(['id', 'nome', 'slug']),
-        ])->layout('layouts.app');
+        ])->layout('layouts.app')->title('Chat');
     }
 }

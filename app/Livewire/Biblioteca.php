@@ -25,6 +25,7 @@ class Biblioteca extends Component
         $totalGeracoes = Geracao::where('status', 'ok')->count();
 
         return view('livewire.biblioteca', compact('disciplinas', 'totalDisciplinas', 'totalPaginas', 'totalGeracoes'))
-            ->layout('layouts.app');
+            ->layout('layouts.app')
+            ->title('Biblioteca');
     }
 }

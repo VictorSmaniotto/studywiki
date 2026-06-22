@@ -69,6 +69,38 @@ class SimuladoPage extends Component
         $this->enviado = true;
     }
 
+    /**
+     * Exporta o simulado em PDF via diálogo nativo de salvar (NativePHP desktop).
+     * No navegador (sem runtime nativo) é um no-op — o download web continua via SimuladoPdfController.
+     *
+     * @param  array<int, string>  $secoes
+     */
+    public function salvarPdfNativo(array $secoes = ['prova_branca']): void
+    {
+        if (! config('nativephp-internal.running')) {
+            return;
+        }
+
+        $service = app(SimuladoPdfService::class);
+        $secoes = $service->normalizarSecoes($secoes);
+
+        $destino = app(Dialog::class)
+            ->title('Salvar simulado em PDF')
+            ->defaultPath($service->nomeArquivo($this->geracao->id))
+            ->filter('PDF', ['pdf'])
+            ->save();
+
+        if (! $destino) {
+            return; // usuário cancelou o diálogo
+        }
+
+        file_put_contents($destino, $service->montar($this->geracao->id, $secoes)->output());
+
+        Notification::title('StudyWiki')
+            ->message('Simulado exportado em PDF.')
+            ->show();
+    }
+
     public function render()
     {
         $fontesPaginas = $this->geracao
@@ -81,6 +113,7 @@ class SimuladoPage extends Component
         $questoesDis = $this->geracao->payload['questoes_dis'] ?? [];
 
         return view('livewire.simulado', compact('fontesPaginas', 'questoesME', 'questoesDis'))
-            ->layout('layouts.app');
+            ->layout('layouts.app')
+            ->title('Simulado');
     }
 }

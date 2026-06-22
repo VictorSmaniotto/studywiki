@@ -60,6 +60,7 @@
                 <input
                     wire:model="queryResumo"
                     type="text"
+                    data-gerar-foco
                     placeholder="Focar em tópico (opcional — ex: 'camada de transporte')"
                     class="w-full text-sm border rounded-md px-3 py-1.5 bg-white dark:bg-zinc-900 placeholder-zinc-400"
                     style="border-color: var(--sw-card-border)"

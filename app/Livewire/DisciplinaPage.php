@@ -168,6 +168,6 @@ class DisciplinaPage extends Component
             'distribuicaoQuestoes' => $evolucao->distribuicaoQuestoes($slug),
             'criteriosMaisPerdidos' => $evolucao->criteriosMaisPerdidos($slug),
             'lacunas' => app(LacunaService::class)->detectar($this->disciplina),
-        ])->layout('layouts.app');
+        ])->layout('layouts.app')->title($this->disciplina->nome);
     }
 }

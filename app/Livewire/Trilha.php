@@ -23,6 +23,6 @@ class Trilha extends Component
             'flashcardsVencidos' => $service->flashcardsVencidos(),
             'topicosPrioritarios' => $service->topicosPrioritarios(),
             'streak' => $service->streakAtual(),
-        ])->layout('layouts.app');
+        ])->layout('layouts.app')->title('Trilha');
     }
 }

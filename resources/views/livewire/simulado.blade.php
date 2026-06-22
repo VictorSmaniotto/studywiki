@@ -81,7 +81,7 @@
                         </div>
                     </div>
                     {{-- Botão Exportar PDF após conclusão (E6) --}}
-                    @include('livewire.partials.simulado-pdf-modal', ['geracaoId' => $geracao->id, 'temRespostas' => true])
+                    @include('livewire.partials.simulado-pdf-modal', ['geracaoId' => $geracao->id, 'temRespostas' => true, 'nativeSave' => true])
                 </div>
             @else
                 <div class="flex items-center gap-3">
@@ -102,7 +102,7 @@
                         Enviar respostas
                     </flux:button>
                     {{-- Botão Exportar PDF antes da conclusão (E5) --}}
-                    @include('livewire.partials.simulado-pdf-modal', ['geracaoId' => $geracao->id, 'temRespostas' => false])
+                    @include('livewire.partials.simulado-pdf-modal', ['geracaoId' => $geracao->id, 'temRespostas' => false, 'nativeSave' => true])
                 </div>
             @endif
         </div>
