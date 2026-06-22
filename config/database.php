@@ -17,7 +17,13 @@ return [
     |
     */
 
-    'default' => env('DB_CONNECTION', 'sqlite'),
+    /*
+    | NativePHP (mobile): dentro do app empacotado não há Postgres/pgvector.
+    | O banco local é SQLite, usado apenas para dados offline (flashcards SM-2,
+    | trilha/streak). A IA e o retrieval vetorial continuam no servidor via API
+    | REST (T7.1). Em desktop/web a conexão padrão segue o DB_CONNECTION (pgsql).
+    */
+    'default' => env('NATIVEPHP_RUNNING') ? 'sqlite' : env('DB_CONNECTION', 'pgsql'),
 
     /*
     |--------------------------------------------------------------------------

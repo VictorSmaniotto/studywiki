@@ -15,6 +15,7 @@
         "laravel/tinker": "^3.0",
         "livewire/flux": "^2.14",
         "livewire/livewire": "^4",
+        "nativephp/mobile": "^3",
         "pgvector/pgvector": "^0.2.2",
         "spatie/yaml-front-matter": "^2.1"
     },
