@@ -1,7 +1,7 @@
 ---
 titulo: Progresso (estado da obra)
 tipo: progress
-atualizado: 2026-06-20 (sessão 10)
+atualizado: 2026-06-21 (sessão 11)
 ---
 
 # Progresso
@@ -70,12 +70,14 @@ atualizado: 2026-06-20 (sessão 10)
 
 - **T6.12** — Metas semanais. `MetaService::progressoSemana()` agrega `resposta_simulados` (simulados concluídos), `flashcards` (revisados via SM-2: `updated_at > created_at`) e `geracoes` (status=ok) da semana corrente (startOfWeek..endOfWeek Carbon). `salvarMetas()` persiste em settings. Livewire `Metas` com `wire:poll.30000ms` + form de configuração. Rota `/metas` + link "Metas" no navbar. Criada `RespostaSimuladoFactory` (ausente na codebase). 7/7 testes novos; 287/287 suite verde.
 
+- **T7.1** — Camada de API REST. Instalado `laravel/sanctum ^4.3`; `personal_access_tokens` migration; `User` model ganhou `HasApiTokens`. 4 controllers em `app/Http/Controllers/Api/` (`DisciplinaController`, `FlashcardController`, `TrilhaController`, `TemaController`). `routes/api.php` com middleware `auth:sanctum`. 21 testes novos (401 sem token, index/show/geracoes/gerar por disciplina, vencidos/revisar flashcard, trilha, temas); 308/308 suite verde.
+
 ## Fazendo agora
-- Próxima: T6.13 — Import de PDF.
+- Próxima: T7.2 — NativePHP base (desktop) — instalar `nativephp/desktop` ^2 diretamente no `studywiki-app`.
 
 ## Falta
 - T6.13 – T6.14 (Fase 6 continuação)
-- T7.1 – T7.4 (NativePHP)
+- T7.2 – T7.4 (NativePHP — monorepo, ver decisão abaixo)
 
 ## Decisões tomadas (resumo; detalhe em docs/adr)
 - Retrieval estruturado antes de vetor (ADR-0001).
@@ -83,6 +85,7 @@ atualizado: 2026-06-20 (sessão 10)
 - Vault read-only; geradores sempre ancorados e verificados.
 - `OBSIDIAN_VAULT_PATH = /var/www/vault` dentro do container Sail. A vault Windows (`C:\Users\Interfocus\Documents\engenharia-de-software-estudos`) é montada como `/var/www/vault:ro` no serviço `laravel.test` do `compose.yaml` (não no pgsql — bug corrigido).
 - Harness reforçado: guard-bash bloqueia leitura de `.env` e chave Anthropic inline; hooks sem Sail bloqueiam em vez de fazer fallback para `php artisan`; commands atualizados para `./vendor/bin/sail artisan`; mem0 integrado com seção no CLAUDE.md e passos no `/proxima-task`.
+- **NativePHP monorepo (sessão 11):** NativePHP instalado diretamente no `studywiki-app` — sem projeto separado `studywiki-native`. Pacotes: `nativephp/desktop` ^2 (desktop) + `nativephp/mobile` ^3 (mobile); ambos suportam Laravel 13. Views Livewire existentes reaproveitadas. Para mobile, DB usa SQLite via `NATIVEPHP_RUNNING=true`. Pasta `../studywiki-native` criada por engano — apagar com `rm -rf ../studywiki-native`.
 
 ## Aberto / a confirmar com o dono
 - ~~Chave `VOYAGEAI_API_KEY` deve ser adicionada ao `.env`~~ — confirmado pelo dono (2026-06-19), chave já presente.

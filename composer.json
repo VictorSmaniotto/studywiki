@@ -11,6 +11,7 @@
         "echolabsdev/prism": "^0.100.1",
         "filament/filament": "^5",
         "laravel/framework": "^13.8",
+        "laravel/sanctum": "^4.3",
         "laravel/tinker": "^3.0",
         "livewire/flux": "^2.14",
         "livewire/livewire": "^4",
