@@ -1,7 +1,7 @@
 ---
 titulo: Progresso (estado da obra)
 tipo: progress
-atualizado: 2026-06-22 (sessão 13 — NativePHP desktop + mobile em branches separados)
+atualizado: 2026-06-20 (sessão 10)
 ---
 
 # Progresso
@@ -62,27 +62,17 @@ atualizado: 2026-06-22 (sessão 13 — NativePHP desktop + mobile em branches se
 - **T6.6** — Sem escopo residual. Histórico de gerações já coberto integralmente por T6.0 (foreach em todas as gerações por tipo na DisciplinaPage).
 - **T6.7** — Query semântica nos geradores. `DisciplinaPage` ganhou `queryResumo`, `queryFlashcards`, `querySimulado` (string). Quando preenchidos, `Escopo::$query` é passado → `AbstractGenerator` despacha para `forQuery` (retrieval híbrido T4.2). Campo "Focar em tópico" adicionado nos cards de Resumo, Flashcards e Simulado. 5 testes novos; 261/261 suite verde.
 
-- **T6.9** — Chat com a vault. `ChatService` em `app/Services/AI/` usa `RetrievalService::forQuery` (RAG híbrido T4.2) + `Prism::text()` para responder perguntas livres. Sem `Geracao` — efêmero. Livewire `Chat` com `$historico` em sessão (chave `chat_historico`), filtro por disciplina, `enviar()` e `limpar()`. Rota `/chat` + link "Chat" no navbar. Bug corrigido no teste C2: `'Não'` maiúsculo vs `'não'` minúsculo no assert. 8/8 testes novos; 269/269 suite verde.
+- **T6.20** — Monitoramento de consumo de tokens com alerta de orçamento. Tabela `token_usage_logs` (input/output/cache_write/cache_read tokens + custo estimado USD + origem). `TokenUsageLogger` com tabela de preços claude-sonnet-4-6 ($3/$15/$3.75/$0.30 por MTok). `AbstractGenerator::executarPipeline` loga após cada chamada LLM (`origem='geracao'`). `ChatService` portado do branch mobile com logging (`origem='chat'`). Widget Filament `TokenBudgetWidget` no dashboard: gasto/orçamento/saldo; fica vermelho quando saldo < `ANTHROPIC_BUDGET_ALERT_USD`. Config `studywiki.budget_usd` (3.25) e `studywiki.budget_alert_usd` (0.50). 8 testes; 269/269 verdes. **Nota:** ChatService portado do branch mobile — branch `feature/nativephp-mobile` tem T6.9–T6.12 que ainda precisam ser propagados ao main via rebase.
 
-- **T6.10** — Detecção de lacunas de conhecimento. `LacunaService::detectar(Disciplina)` agrega erros de ME por `heading_path` (batch-load de chunks), exige ≥2 simulados respondidos, retorna top 3 por taxa de erro. Card "Pontos fracos" na aba Evolução; botão "Revisar" chama `revisarTopico()` → seta `queryResumo` e despacha `sw-mudar-aba` para mudar aba via Alpine. 6/6 testes; 275/275 suite verde.
-
-- **T6.11** — Lembretes diários. `EnviarLembreteDiario` command (`studywiki:lembrete`) + `LembreteDiario` Mailable + template Blade. Agendado em `routes/console.php` com `Schedule::command()->dailyAt(Setting::get('lembrete_horario', '08:00'))`. Settings: `lembrete_ativo` (default '1') + `lembrete_horario`. Streak em risco quando `streak_last_date == ontem && streakAtual > 0`. 5/5 testes novos; 280/280 suite verde.
-
-- **T6.12** — Metas semanais. `MetaService::progressoSemana()` agrega `resposta_simulados` (simulados concluídos), `flashcards` (revisados via SM-2: `updated_at > created_at`) e `geracoes` (status=ok) da semana corrente (startOfWeek..endOfWeek Carbon). `salvarMetas()` persiste em settings. Livewire `Metas` com `wire:poll.30000ms` + form de configuração. Rota `/metas` + link "Metas" no navbar. Criada `RespostaSimuladoFactory` (ausente na codebase). 7/7 testes novos; 287/287 suite verde.
-
-- **T7.1** — Camada de API REST. Instalado `laravel/sanctum ^4.3`; `personal_access_tokens` migration; `User` model ganhou `HasApiTokens`. 4 controllers em `app/Http/Controllers/Api/` (`DisciplinaController`, `FlashcardController`, `TrilhaController`, `TemaController`). `routes/api.php` com middleware `auth:sanctum`. 21 testes novos (401 sem token, index/show/geracoes/gerar por disciplina, vencidos/revisar flashcard, trilha, temas); 308/308 suite verde.
-
-- **T7.2** (branch `feature/nativephp`) — NativePHP desktop base. `nativephp/desktop` ^2 (2.2.1) + `native:install` (scaffolding Electron). `NativeAppServiceProvider`: janela StudyWiki 1280×800 (min 1024×700), `rememberState`. `config/nativephp.php`: `app_id` `com.rockandcode.studywiki`. Abertura da janela exige GUI no host (não verificável na sandbox). 311/311 verde.
-- **T7.3** (branch `feature/nativephp`) — UX desktop. Menu nativo (Navegar: Biblioteca/Trilha/Chat/Metas em CmdOrCtrl+1..4; "Focar em Gerar" CmdOrCtrl+G → evento `focus-gerar` capturado em `app.js`; View nativo = Reload CmdOrCtrl+R). Título da janela dinâmico por rota via `->title()` em cada página Livewire. PDF via diálogo nativo: `SimuladoPdfService` extraído do controller; `SimuladoPage::salvarPdfNativo` usa `Native\Desktop\Dialog->save()` quando nativo, com fallback web. 3 testes novos. Bug corrigido: colisão `Pdf` (Facade) × `PDF` (instância) — case-insensitive — quebrava o autoload silenciosamente. 311/311 verde.
-- **T7.4 base** (branch `feature/nativephp-mobile`) — NativePHP mobile. `nativephp/mobile` ^3 (3.3.6) instalado; provider `NativeServiceProvider` publicado e registrado; `config/nativephp.php` mobile (`app_id` `com.rockandcode.studywiki`). `config/database.php` usa SQLite quando `NATIVEPHP_RUNNING` setado (dados offline: flashcards SM-2, trilha; IA/retrieval ficam no servidor via API REST). **Build Android não roda sob WSL** — `native:install`/`native:run android` exigem Windows. UI mobile (bottom-nav, flashcard player, simulado ME-only) pendente. 308/308 verde no núcleo.
+- **T6.24** — Fila assíncrona para respostas do Chat. `ChatResponseJob` (tries=3) move a chamada ao `ChatService` para fora do request HTTP. `Chat::enviar()` adiciona user + placeholder `status:'pending'` imediatamente, persiste e despacha o job. `refreshHistorico()` sincroniza do banco; `wire:poll.2s` dispara enquanto houver pendente. Indicador de três pontos integrado ao loop do historico (por `status`). Guard `temPendente()` impede envio duplo. 339/339 verdes.
 
 ## Fazendo agora
-- T7.4 (mobile, branch `feature/nativephp-mobile`): falta a UI mobile — layout bottom-nav (Trilha/Disciplinas/Temas), flashcard player (Lembrei/Esqueci) e simulado simplificado (só ME, sem PDF).
+- Próxima: T6.21 — Perfil de usuário e settings centralizados.
 
 ## Falta
-- T6.13 – T6.14 (Fase 6 continuação)
-- T7.4 UI mobile + build Android (lado Windows, ver `docs/nativephp.md`)
-- T7.4.1 — acesso de rede do emulador (IP da LAN / túnel)
+- T6.21: Perfil de usuário e settings centralizados (Livewire `Perfil`, 3 abas: Conta/Aparência/Preferências, `SettingsService` tipado).
+- T6.13, T6.14, T6.15–T6.19: ver tasks.md.
+- Propagação de T6.9–T6.12 do branch mobile para main (rebase).
 
 ## Decisões tomadas (resumo; detalhe em docs/adr)
 - Retrieval estruturado antes de vetor (ADR-0001).
@@ -90,9 +80,6 @@ atualizado: 2026-06-22 (sessão 13 — NativePHP desktop + mobile em branches se
 - Vault read-only; geradores sempre ancorados e verificados.
 - `OBSIDIAN_VAULT_PATH = /var/www/vault` dentro do container Sail. A vault Windows (`C:\Users\Interfocus\Documents\engenharia-de-software-estudos`) é montada como `/var/www/vault:ro` no serviço `laravel.test` do `compose.yaml` (não no pgsql — bug corrigido).
 - Harness reforçado: guard-bash bloqueia leitura de `.env` e chave Anthropic inline; hooks sem Sail bloqueiam em vez de fazer fallback para `php artisan`; commands atualizados para `./vendor/bin/sail artisan`; mem0 integrado com seção no CLAUDE.md e passos no `/proxima-task`.
-- ~~**NativePHP monorepo (sessão 11):** desktop + mobile juntos no mesmo `studywiki-app`.~~ **SUPERADO pelo ADR-0003 (sessão 13):** `nativephp/desktop` ^2 e `nativephp/mobile` ^3 têm `conflict` declarado no Composer — não coexistem. Arquitetura: 1 núcleo compartilhado + 3 cascas em branches separados — `main` (Web) · `feature/nativephp` (Desktop) · `feature/nativephp-mobile` (Mobile). Guia de trabalho entre branches em `docs/nativephp.md`; decisão em `docs/adr/0003-nativephp-branches-desktop-mobile.md`. Mobile usa SQLite só para dados offline; IA/retrieval via API REST (T7.1). Pasta `../studywiki-native` criada por engano — apagar com `rm -rf ../studywiki-native`.
 
 ## Aberto / a confirmar com o dono
 - ~~Chave `VOYAGEAI_API_KEY` deve ser adicionada ao `.env`~~ — confirmado pelo dono (2026-06-19), chave já presente.
-- **(mobile)** `NATIVEPHP_APP_ID` no `.env` foi gravado com valor aleatório (`com.sail.stonewavebrave`) pelo `native:install`; trocar para `com.rockandcode.studywiki` (automação não edita `.env`).
-- **(mobile)** Build Android (`native:install` + `native:run android`) deve rodar a partir do **Windows**, não do WSL.

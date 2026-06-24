@@ -21,6 +21,7 @@ abstract class AbstractGenerator
     public function __construct(
         protected readonly RetrievalService $retrieval,
         protected readonly GroundingValidator $validator,
+        protected readonly TokenUsageLogger $usageLogger = new TokenUsageLogger,
     ) {}
 
     abstract protected function tipo(): string;
@@ -59,7 +60,12 @@ abstract class AbstractGenerator
 
         for ($tentativa = 1; $tentativa <= static::MAX_TENTATIVAS; $tentativa++) {
             $response = $this->chamarLLM($chunks);
-            $totalTokens += $response->usage->promptTokens + $response->usage->completionTokens;
+            $inputTokens = $response->usage->promptTokens;
+            $outputTokens = $response->usage->completionTokens;
+            $cacheWrite = $response->usage->cacheWriteInputTokens ?? 0;
+            $cacheRead = $response->usage->cacheReadInputTokens ?? 0;
+            $totalTokens += $inputTokens + $outputTokens;
+            $this->usageLogger->log($inputTokens, $outputTokens, 'geracao', $cacheWrite, $cacheRead);
             $payload = $response->structured;
             $ultimoPayload = $payload;
 

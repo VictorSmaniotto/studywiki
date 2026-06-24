@@ -203,7 +203,71 @@ it('TL3: streakAtual retorna 0 quando ultima sessao foi ha mais de 1 dia', funct
 });
 
 // ──────────────────────────────────────────────
-// Livewire Trilha
+// TL4 — marcarRevisao (SM-2)
+// ──────────────────────────────────────────────
+
+it('TL4: marcarRevisao acerto na primeira repeticao seta intervalo=1 e incrementa repeticoes', function () {
+    $card = Flashcard::factory()->create(['repeticoes' => 0, 'intervalo' => 1, 'facilidade' => 2.5]);
+
+    (new TrilhaService)->marcarRevisao($card->id, true);
+
+    $card->refresh();
+    expect($card->repeticoes)->toBe(1)
+        ->and($card->intervalo)->toBe(1)
+        ->and($card->proxima_revisao->toDateString())->toBe(Carbon::today()->addDay()->toDateString());
+});
+
+it('TL4: marcarRevisao acerto na segunda repeticao seta intervalo=6', function () {
+    $card = Flashcard::factory()->create(['repeticoes' => 1, 'intervalo' => 1, 'facilidade' => 2.5]);
+
+    (new TrilhaService)->marcarRevisao($card->id, true);
+
+    $card->refresh();
+    expect($card->repeticoes)->toBe(2)
+        ->and($card->intervalo)->toBe(6);
+});
+
+it('TL4: marcarRevisao acerto apos segunda repeticao multiplica intervalo pela facilidade', function () {
+    $card = Flashcard::factory()->create(['repeticoes' => 2, 'intervalo' => 6, 'facilidade' => 2.5]);
+
+    (new TrilhaService)->marcarRevisao($card->id, true);
+
+    $card->refresh();
+    expect($card->intervalo)->toBe(15) // round(6 * 2.5)
+        ->and($card->repeticoes)->toBe(3);
+});
+
+it('TL4: marcarRevisao erro reseta repeticoes e intervalo para 1', function () {
+    $card = Flashcard::factory()->create(['repeticoes' => 5, 'intervalo' => 30, 'facilidade' => 2.5]);
+
+    (new TrilhaService)->marcarRevisao($card->id, false);
+
+    $card->refresh();
+    expect($card->repeticoes)->toBe(0)
+        ->and($card->intervalo)->toBe(1)
+        ->and($card->proxima_revisao->toDateString())->toBe(Carbon::today()->addDay()->toDateString());
+});
+
+it('TL4: marcarRevisao erro diminui facilidade respeitando minimo de 1.3', function () {
+    $card = Flashcard::factory()->create(['facilidade' => 1.4]);
+
+    (new TrilhaService)->marcarRevisao($card->id, false);
+
+    $card->refresh();
+    expect($card->facilidade)->toBe(1.3);
+});
+
+it('TL4: marcarRevisao acerto aumenta facilidade', function () {
+    $card = Flashcard::factory()->create(['repeticoes' => 3, 'intervalo' => 10, 'facilidade' => 2.5]);
+
+    (new TrilhaService)->marcarRevisao($card->id, true);
+
+    $card->refresh();
+    expect($card->facilidade)->toBe(2.6);
+});
+
+// ──────────────────────────────────────────────
+// Livewire Trilha — renderização
 // ──────────────────────────────────────────────
 
 it('pagina trilha renderiza com texto Trilha', function () {
@@ -212,20 +276,14 @@ it('pagina trilha renderiza com texto Trilha', function () {
         ->assertSee('Trilha');
 });
 
-it('pagina trilha exibe flashcard vencido', function () {
-    Flashcard::factory()->create([
-        'frente' => 'Conceito de pilha léxica',
-        'proxima_revisao' => Carbon::today()->toDateString(),
-    ]);
-    Flashcard::factory()->create([
-        'proxima_revisao' => Carbon::tomorrow()->toDateString(),
-    ]);
+it('pagina trilha exibe contador de flashcards vencidos', function () {
+    Flashcard::factory()->count(3)->create(['proxima_revisao' => Carbon::today()->toDateString()]);
 
     Livewire::test(Trilha::class)
-        ->assertSee('Conceito de pilha léxica');
+        ->assertSee('3');
 });
 
-it('pagina trilha nao exibe card futuro', function () {
+it('pagina trilha nao exibe card futuro no sumario', function () {
     Flashcard::factory()->create([
         'frente' => 'Card do futuro',
         'proxima_revisao' => Carbon::tomorrow()->toDateString(),
@@ -235,18 +293,101 @@ it('pagina trilha nao exibe card futuro', function () {
         ->assertDontSee('Card do futuro');
 });
 
-it('registrarSessao via livewire seta sessaoRegistrada e persiste streak', function () {
-    Livewire::test(Trilha::class)
-        ->call('registrarSessao')
-        ->assertSet('sessaoRegistrada', true);
-
-    expect(Setting::get('streak_count'))->toBe('1');
-});
-
 it('pagina trilha exibe streak atual', function () {
     Setting::set('streak_last_date', Carbon::today()->toDateString());
     Setting::set('streak_count', '4');
 
     Livewire::test(Trilha::class)
         ->assertSee('4');
+});
+
+// ──────────────────────────────────────────────
+// Livewire Trilha — fluxo de revisão
+// ──────────────────────────────────────────────
+
+it('iniciarRevisao transiciona para modoRevisao e exibe frente do card', function () {
+    Flashcard::factory()->create([
+        'frente' => 'O que é habeas corpus?',
+        'proxima_revisao' => Carbon::today()->toDateString(),
+    ]);
+
+    Livewire::test(Trilha::class)
+        ->call('iniciarRevisao')
+        ->assertSet('modoRevisao', true)
+        ->assertSee('O que é habeas corpus?');
+});
+
+it('iniciarRevisao nao faz nada quando nao ha cards vencidos', function () {
+    Flashcard::factory()->create(['proxima_revisao' => Carbon::tomorrow()->toDateString()]);
+
+    Livewire::test(Trilha::class)
+        ->call('iniciarRevisao')
+        ->assertSet('modoRevisao', false);
+});
+
+it('revelarResposta exibe verso do card', function () {
+    Flashcard::factory()->create([
+        'frente' => 'Pergunta',
+        'verso' => 'Resposta esperada do verso',
+        'proxima_revisao' => Carbon::today()->toDateString(),
+    ]);
+
+    Livewire::test(Trilha::class)
+        ->call('iniciarRevisao')
+        ->call('revelarResposta')
+        ->assertSet('respostaRevelada', true)
+        ->assertSee('Resposta esperada do verso');
+});
+
+it('avaliar acerto avanca para o proximo card', function () {
+    Flashcard::factory()->create(['proxima_revisao' => Carbon::today()->toDateString()]);
+    Flashcard::factory()->create([
+        'frente' => 'Segundo card',
+        'proxima_revisao' => Carbon::today()->toDateString(),
+    ]);
+
+    Livewire::test(Trilha::class)
+        ->call('iniciarRevisao')
+        ->call('revelarResposta')
+        ->call('avaliar', true)
+        ->assertSet('indiceAtual', 1)
+        ->assertSet('acertos', 1)
+        ->assertSee('Segundo card');
+});
+
+it('avaliar erro avanca para o proximo card e conta erro', function () {
+    Flashcard::factory()->create(['proxima_revisao' => Carbon::today()->toDateString()]);
+    Flashcard::factory()->create(['proxima_revisao' => Carbon::today()->toDateString()]);
+
+    Livewire::test(Trilha::class)
+        ->call('iniciarRevisao')
+        ->call('revelarResposta')
+        ->call('avaliar', false)
+        ->assertSet('indiceAtual', 1)
+        ->assertSet('erros', 1);
+});
+
+it('ultimo card avaliado seta sessaoConcluida e registra streak', function () {
+    Flashcard::factory()->create(['proxima_revisao' => Carbon::today()->toDateString()]);
+
+    Livewire::test(Trilha::class)
+        ->call('iniciarRevisao')
+        ->call('revelarResposta')
+        ->call('avaliar', true)
+        ->assertSet('sessaoConcluida', true);
+
+    expect(Setting::get('streak_count'))->toBe('1');
+});
+
+it('encerrarRevisao reseta todos os estados', function () {
+    Flashcard::factory()->create(['proxima_revisao' => Carbon::today()->toDateString()]);
+
+    Livewire::test(Trilha::class)
+        ->call('iniciarRevisao')
+        ->call('encerrarRevisao')
+        ->assertSet('modoRevisao', false)
+        ->assertSet('sessaoConcluida', false)
+        ->assertSet('indiceAtual', 0)
+        ->assertSet('acertos', 0)
+        ->assertSet('erros', 0);
 });

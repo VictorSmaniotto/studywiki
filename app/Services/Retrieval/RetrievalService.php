@@ -53,6 +53,7 @@ class RetrievalService
 
     /**
      * Hybrid retrieval: vector similarity + full-text search merged with RRF.
+     * When FTS returns empty, falls back to prefix-keyword search with unaccent.
      *
      * @return list<array{chunk_id: int, pagina_id: int, heading_path: string|null, conteudo: string, tokens: int, titulo_pagina: string, path_relativo: string, score: float}>
      */
@@ -106,6 +107,8 @@ class RetrievalService
     }
 
     /**
+     * FTS search with unaccent-prefix fallback when the tsquery matches nothing.
+     *
      * @return list<array{chunk_id: int, pagina_id: int, heading_path: string|null, conteudo: string, tokens: int, titulo_pagina: string, path_relativo: string, score: float}>
      */
     private function ftsSearch(string $query, Escopo $escopo, int $limit): array
@@ -135,7 +138,7 @@ class RetrievalService
 
         $this->applyEscopoFilters($baseQuery, $escopo);
 
-        return $baseQuery->get()->map(fn ($row) => [
+        $results = $baseQuery->get()->map(fn ($row) => [
             'chunk_id' => $row->chunk_id,
             'pagina_id' => $row->pagina_id,
             'heading_path' => $row->heading_path,
@@ -144,6 +147,81 @@ class RetrievalService
             'titulo_pagina' => $row->titulo_pagina,
             'path_relativo' => $row->path_relativo,
             'score' => (float) $row->score,
+        ])->all();
+
+        if (! empty($results)) {
+            return $results;
+        }
+
+        return $this->keywordFallbackSearch($query, $escopo, $limit);
+    }
+
+    /**
+     * Fallback: splits query into significant words, matches by unaccented prefix.
+     * Handles singular/plural and accent variations that confuse the FTS stemmer.
+     *
+     * @return list<array{chunk_id: int, pagina_id: int, heading_path: string|null, conteudo: string, tokens: int, titulo_pagina: string, path_relativo: string, score: float}>
+     */
+    private function keywordFallbackSearch(string $query, Escopo $escopo, int $limit): array
+    {
+        $stopWords = ['de', 'do', 'da', 'dos', 'das', 'em', 'no', 'na', 'nos', 'nas',
+            'a', 'o', 'as', 'os', 'e', 'para', 'com', 'por', 'que', 'se',
+            'um', 'uma', 'ou', 'ao', 'aos', 'às', 'the', 'and'];
+
+        $words = array_values(array_filter(
+            preg_split('/\s+/', mb_strtolower($query)) ?: [],
+            fn (string $w) => mb_strlen($w) >= 4 && ! in_array($w, $stopWords)
+        ));
+
+        if (empty($words)) {
+            return [];
+        }
+
+        // Prefix = first 75% of each word so singular/plural share the same prefix.
+        $patterns = array_map(function (string $w): string {
+            $prefix = mb_substr($w, 0, max(3, (int) ceil(mb_strlen($w) * 0.75)));
+
+            return '%'.$prefix.'%';
+        }, $words);
+
+        $caseParts = array_fill(
+            0,
+            count($patterns),
+            'CASE WHEN unaccent(lower(chunks.conteudo)) LIKE unaccent(lower(?)) THEN 1 ELSE 0 END'
+        );
+
+        $baseQuery = Chunk::query()
+            ->select([
+                'chunks.id as chunk_id',
+                'chunks.pagina_id',
+                'chunks.heading_path',
+                'chunks.conteudo',
+                'chunks.tokens',
+                'paginas.titulo as titulo_pagina',
+                'paginas.path_relativo',
+            ])
+            ->selectRaw('('.implode(' + ', $caseParts).') as keyword_score', $patterns)
+            ->join('paginas', 'paginas.id', '=', 'chunks.pagina_id')
+            ->whereNull('paginas.deleted_at')
+            ->where(function (Builder $q) use ($patterns): void {
+                foreach ($patterns as $p) {
+                    $q->orWhereRaw('unaccent(lower(chunks.conteudo)) LIKE unaccent(lower(?))', [$p]);
+                }
+            })
+            ->orderByDesc('keyword_score')
+            ->limit($limit);
+
+        $this->applyEscopoFilters($baseQuery, $escopo);
+
+        return $baseQuery->get()->map(fn ($row): array => [
+            'chunk_id' => $row->chunk_id,
+            'pagina_id' => $row->pagina_id,
+            'heading_path' => $row->heading_path,
+            'conteudo' => $row->conteudo,
+            'tokens' => $row->tokens,
+            'titulo_pagina' => $row->titulo_pagina,
+            'path_relativo' => $row->path_relativo,
+            'score' => 0.05,
         ])->all();
     }
 
@@ -185,6 +263,10 @@ class RetrievalService
             $query->join('disciplinas', 'disciplinas.id', '=', 'paginas.disciplina_id')
                 ->join('disciplina_tema', 'disciplina_tema.disciplina_id', '=', 'disciplinas.id')
                 ->where('disciplina_tema.tema_id', $escopo->temaId);
+        } elseif ($escopo->disciplinas !== []) {
+            $slugs = array_map(fn (string $d) => Str::slug($d), $escopo->disciplinas);
+            $query->join('disciplinas', 'disciplinas.id', '=', 'paginas.disciplina_id')
+                ->whereIn('disciplinas.slug', $slugs);
         } elseif ($escopo->disciplina !== null) {
             $slug = Str::slug($escopo->disciplina);
             $query->join('disciplinas', 'disciplinas.id', '=', 'paginas.disciplina_id')

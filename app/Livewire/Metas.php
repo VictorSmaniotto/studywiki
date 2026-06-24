@@ -44,6 +44,6 @@ class Metas extends Component
     {
         return view('livewire.metas', [
             'progresso' => app(MetaService::class)->progressoSemana(),
-        ])->layout('layouts.app');
+        ])->layout('layouts.app')->title('Metas');
     }
 }

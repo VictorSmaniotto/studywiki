@@ -1,4 +1,8 @@
 <div x-data="{ tab: 'resumo' }" @sw-mudar-aba.window="tab = $event.detail.aba">
+
+    @if(count($tiposGerando) > 0)
+        <div wire:poll.2s="verificarGeracoes" class="hidden"></div>
+    @endif
     {{-- Breadcrumb + header --}}
     <div class="mb-6">
         <flux:link href="{{ route('biblioteca') }}" class="text-sm mb-2 inline-flex items-center gap-1">
@@ -45,16 +49,17 @@
                     </div>
                     <flux:button
                         wire:click="gerarResumo"
-                        wire:loading.attr="disabled"
-                        wire:target="gerarResumo"
+                        :disabled="count($tiposGerando) > 0"
                         variant="primary"
                         size="sm"
+                        data-gerar-foco
                     >
-                        <span wire:loading.remove wire:target="gerarResumo">Gerar Resumo</span>
-                        <span wire:loading wire:target="gerarResumo" class="flex items-center gap-2">
+                        @if(in_array('resumo', $tiposGerando))
                             <flux:icon name="arrow-path" class="w-3.5 h-3.5 animate-spin" />
                             Gerando…
-                        </span>
+                        @else
+                            Gerar Resumo
+                        @endif
                     </flux:button>
                 </div>
                 <input
@@ -150,16 +155,16 @@
                     </div>
                     <flux:button
                         wire:click="gerarFlashcards"
-                        wire:loading.attr="disabled"
-                        wire:target="gerarFlashcards"
+                        :disabled="count($tiposGerando) > 0"
                         variant="primary"
                         size="sm"
                     >
-                        <span wire:loading.remove wire:target="gerarFlashcards">Gerar Flashcards</span>
-                        <span wire:loading wire:target="gerarFlashcards" class="flex items-center gap-2">
+                        @if(in_array('flashcards', $tiposGerando))
                             <flux:icon name="arrow-path" class="w-3.5 h-3.5 animate-spin" />
                             Gerando…
-                        </span>
+                        @else
+                            Gerar Flashcards
+                        @endif
                     </flux:button>
                 </div>
                 <input
@@ -294,16 +299,16 @@
                         </div>
                         <flux:button
                             wire:click="gerarSimulado"
-                            wire:loading.attr="disabled"
-                            wire:target="gerarSimulado"
+                            :disabled="count($tiposGerando) > 0"
                             variant="primary"
                             size="sm"
                         >
-                            <span wire:loading.remove wire:target="gerarSimulado">Gerar Simulado</span>
-                            <span wire:loading wire:target="gerarSimulado" class="flex items-center gap-2">
+                            @if(in_array('simulado', $tiposGerando))
                                 <flux:icon name="arrow-path" class="w-3.5 h-3.5 animate-spin" />
                                 Gerando…
-                            </span>
+                            @else
+                                Gerar Simulado
+                            @endif
                         </flux:button>
                     </div>
                 </div>
@@ -607,16 +612,16 @@
                 </div>
                 <flux:button
                     wire:click="gerarMapaMental"
-                    wire:loading.attr="disabled"
-                    wire:target="gerarMapaMental"
+                    :disabled="count($tiposGerando) > 0"
                     variant="primary"
                     size="sm"
                 >
-                    <span wire:loading.remove wire:target="gerarMapaMental">Gerar Mapa Mental</span>
-                    <span wire:loading wire:target="gerarMapaMental" class="flex items-center gap-2">
+                    @if(in_array('mapa_mental', $tiposGerando))
                         <flux:icon name="arrow-path" class="w-3.5 h-3.5 animate-spin" />
                         Gerando…
-                    </span>
+                    @else
+                        Gerar Mapa Mental
+                    @endif
                 </flux:button>
             </div>
         </flux:card>
