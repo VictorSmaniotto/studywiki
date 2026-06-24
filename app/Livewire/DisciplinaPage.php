@@ -2,19 +2,23 @@
 
 namespace App\Livewire;
 
+use App\Jobs\GerarConteudoJob;
 use App\Models\Disciplina;
 use App\Models\Geracao;
-use App\Services\AI\FlashcardsGenerator;
-use App\Services\AI\MapaMentalGenerator;
-use App\Services\AI\ResumoGenerator;
-use App\Services\AI\SimuladoGenerator;
 use App\Services\EvolucaoService;
 use App\Services\LacunaService;
-use App\Services\Retrieval\Escopo;
+use Flux\Flux;
 use Livewire\Component;
 
 class DisciplinaPage extends Component
 {
+    private const ERRO_PROP = [
+        'resumo' => 'erroResumo',
+        'flashcards' => 'erroFlashcards',
+        'simulado' => 'erroSimulado',
+        'mapa_mental' => 'erroMapaMental',
+    ];
+
     public Disciplina $disciplina;
 
     public string $erroResumo = '';
@@ -41,6 +45,12 @@ class DisciplinaPage extends Component
 
     public string $querySimulado = '';
 
+    /** @var string[] tipos com job em andamento */
+    public array $tiposGerando = [];
+
+    /** @var array<string, int> max geracao_id por tipo no momento do dispatch */
+    public array $latestIds = [];
+
     public function mount(string $slug): void
     {
         $this->disciplina = Disciplina::where('slug', $slug)->firstOrFail();
@@ -65,31 +75,13 @@ class DisciplinaPage extends Component
     public function gerarResumo(): void
     {
         $this->erroResumo = '';
-
-        $geracao = app(ResumoGenerator::class)->gerar(
-            new Escopo(disciplina: $this->disciplina->slug, query: $this->queryResumo ?: null)
-        );
-
-        if ($geracao->status === 'ok') {
-            $this->expandidos[] = $geracao->id;
-        } else {
-            $this->erroResumo = 'Geração rejeitada: conteúdo insuficiente para ancoragem. Tente novamente.';
-        }
+        $this->despacharJob('resumo', $this->queryResumo ?: null);
     }
 
     public function gerarFlashcards(): void
     {
         $this->erroFlashcards = '';
-
-        $geracao = app(FlashcardsGenerator::class)->gerar(
-            new Escopo(disciplina: $this->disciplina->slug, query: $this->queryFlashcards ?: null)
-        );
-
-        if ($geracao->status === 'ok') {
-            $this->expandidos[] = $geracao->id;
-        } else {
-            $this->erroFlashcards = 'Geração rejeitada: conteúdo insuficiente para ancoragem. Tente novamente.';
-        }
+        $this->despacharJob('flashcards', $this->queryFlashcards ?: null);
     }
 
     public function gerarSimulado(): void
@@ -102,35 +94,46 @@ class DisciplinaPage extends Component
             default => 0,
         };
 
-        $geracao = app(SimuladoGenerator::class)->gerar(
-            new Escopo(disciplina: $this->disciplina->slug, query: $this->querySimulado ?: null),
-            $this->nQuestoes,
-            $this->nDissertativas,
-            $this->dificuldade,
-            $this->perfil,
-            $tempoEstimado,
-        );
-
-        if ($geracao->status === 'ok') {
-            $this->expandidos[] = $geracao->id;
-        } else {
-            $this->erroSimulado = 'Geração rejeitada: conteúdo insuficiente para ancoragem. Tente novamente.';
-        }
+        $this->despacharJob('simulado', $this->querySimulado ?: null, $tempoEstimado);
     }
 
     public function gerarMapaMental(): void
     {
         $this->erroMapaMental = '';
+        $this->despacharJob('mapa_mental');
+    }
 
-        $geracao = app(MapaMentalGenerator::class)->gerar(
-            new Escopo(disciplina: $this->disciplina->slug)
-        );
+    public function verificarGeracoes(): void
+    {
+        $slug = $this->disciplina->slug;
+        $concluidos = [];
 
-        if ($geracao->status === 'ok') {
-            $this->expandidos[] = $geracao->id;
-        } else {
-            $this->erroMapaMental = 'Geração rejeitada: conteúdo insuficiente para ancoragem. Tente novamente.';
+        foreach ($this->tiposGerando as $tipo) {
+            $nova = Geracao::whereRaw("escopo->>'disciplina' = ?", [$slug])
+                ->where('tipo', $tipo)
+                ->where('id', '>', $this->latestIds[$tipo] ?? 0)
+                ->latest('id')
+                ->first();
+
+            if (! $nova) {
+                continue;
+            }
+
+            $concluidos[] = $tipo;
+
+            if ($nova->status === 'ok') {
+                $this->expandidos[] = $nova->id;
+                Flux::toast($this->labelToast($tipo).' gerado com sucesso!', variant: 'success');
+            } else {
+                $prop = self::ERRO_PROP[$tipo];
+                $this->$prop = 'Geração rejeitada: conteúdo insuficiente para ancoragem. Tente novamente.';
+                Flux::toast('Geração rejeitada: conteúdo insuficiente para ancoragem.', variant: 'danger');
+            }
         }
+
+        $this->tiposGerando = array_values(
+            array_filter($this->tiposGerando, fn ($t) => ! in_array($t, $concluidos))
+        );
     }
 
     public function revisarTopico(string $topico): void
@@ -169,5 +172,36 @@ class DisciplinaPage extends Component
             'criteriosMaisPerdidos' => $evolucao->criteriosMaisPerdidos($slug),
             'lacunas' => app(LacunaService::class)->detectar($this->disciplina),
         ])->layout('layouts.app')->title($this->disciplina->nome);
+    }
+
+    private function despacharJob(string $tipo, ?string $query = null, int $tempoEstimado = 0): void
+    {
+        $this->latestIds[$tipo] = Geracao::whereRaw("escopo->>'disciplina' = ?", [$this->disciplina->slug])
+            ->where('tipo', $tipo)
+            ->max('id') ?? 0;
+
+        $this->tiposGerando = array_unique([...$this->tiposGerando, $tipo]);
+
+        GerarConteudoJob::dispatch(
+            $tipo,
+            $this->disciplina->slug,
+            $query,
+            $this->nQuestoes,
+            $this->nDissertativas,
+            $this->dificuldade,
+            $this->perfil,
+            $tempoEstimado,
+        );
+    }
+
+    private function labelToast(string $tipo): string
+    {
+        return match ($tipo) {
+            'resumo' => 'Resumo',
+            'flashcards' => 'Flashcards',
+            'simulado' => 'Simulado',
+            'mapa_mental' => 'Mapa mental',
+            default => ucfirst($tipo),
+        };
     }
 }

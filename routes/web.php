@@ -16,3 +16,5 @@ Route::get('/chat', Chat::class)->name('chat');
 Route::get('/disciplina/{slug}', DisciplinaPage::class)->name('disciplina');
 Route::get('/simulado/{id}', SimuladoPage::class)->name('simulado');
 Route::get('/simulado/{id}/pdf', SimuladoPdfController::class)->name('simulado.pdf');
+Route::get('/metas', Metas::class)->name('metas');
+Route::get('/chat', Chat::class)->name('chat');

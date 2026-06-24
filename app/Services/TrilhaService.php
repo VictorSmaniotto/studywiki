@@ -106,6 +106,29 @@ class TrilhaService
         return (int) Setting::get('streak_count', '0');
     }
 
+    public function marcarRevisao(int $flashcardId, bool $acertou): void
+    {
+        $card = Flashcard::findOrFail($flashcardId);
+
+        if ($acertou) {
+            $novoIntervalo = match (true) {
+                $card->repeticoes === 0 => 1,
+                $card->repeticoes === 1 => 6,
+                default => (int) round($card->intervalo * $card->facilidade),
+            };
+            $card->facilidade = round(max(1.3, $card->facilidade + 0.1), 2);
+            $card->repeticoes++;
+            $card->intervalo = $novoIntervalo;
+        } else {
+            $card->intervalo = 1;
+            $card->repeticoes = 0;
+            $card->facilidade = round(max(1.3, $card->facilidade - 0.2), 2);
+        }
+
+        $card->proxima_revisao = Carbon::today()->addDays($card->intervalo);
+        $card->save();
+    }
+
     public function registrarSessao(): void
     {
         $hoje = Carbon::today()->toDateString();

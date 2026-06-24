@@ -223,30 +223,32 @@ it('nova geração de resumo aparece auto-expandida após gerarResumo', function
     $disciplina = criarDisciplinaComPaginas();
     $pagina = $disciplina->paginas->first();
 
-    $geracao = Geracao::factory()->create([
-        'tipo' => 'resumo',
-        'status' => 'ok',
-        'escopo' => escopoJson($disciplina),
-        'payload' => [
-            'titulo' => 'Resumo de Compiladores',
-            'secoes' => [[
-                'heading' => 'Análise Léxica',
-                'bullets' => [['texto' => 'Compiladores analisam tokens.', 'fontes' => [['pagina_id' => $pagina->id, 'chunk_id' => 1]]]],
-            ]],
-            'fontes_globais' => [],
-        ],
-    ]);
-
-    GeracaoFonte::create(['geracao_id' => $geracao->id, 'pagina_id' => $pagina->id]);
-
     $mock = $this->mock(ResumoGenerator::class);
     $mock->shouldReceive('gerar')
         ->once()
         ->with(Mockery::on(fn (Escopo $e) => $e->disciplina === $disciplina->slug))
-        ->andReturn($geracao);
+        ->andReturnUsing(function () use ($disciplina, $pagina) {
+            $geracao = Geracao::factory()->create([
+                'tipo' => 'resumo',
+                'status' => 'ok',
+                'escopo' => escopoJson($disciplina),
+                'payload' => [
+                    'titulo' => 'Resumo de Compiladores',
+                    'secoes' => [[
+                        'heading' => 'Análise Léxica',
+                        'bullets' => [['texto' => 'Compiladores analisam tokens.', 'fontes' => [['pagina_id' => $pagina->id, 'chunk_id' => 1]]]],
+                    ]],
+                    'fontes_globais' => [],
+                ],
+            ]);
+            GeracaoFonte::create(['geracao_id' => $geracao->id, 'pagina_id' => $pagina->id]);
+
+            return $geracao;
+        });
 
     Livewire::test(DisciplinaPage::class, ['slug' => $disciplina->slug])
         ->call('gerarResumo')
+        ->call('verificarGeracoes')
         ->assertSee('Resumo de Compiladores')
         ->assertSee('Análise Léxica')
         ->assertSee('Compiladores analisam tokens.');
@@ -255,18 +257,19 @@ it('nova geração de resumo aparece auto-expandida após gerarResumo', function
 it('nova geração de simulado aparece auto-expandida com link Iniciar Simulado', function () {
     $disciplina = criarDisciplinaComPaginas();
 
-    $geracao = Geracao::factory()->create([
-        'tipo' => 'simulado',
-        'status' => 'ok',
-        'escopo' => escopoJson($disciplina),
-        'payload' => ['questoes' => [['contexto' => 'c', 'enunciado' => 'e', 'formato' => 'direto', 'alternativas' => ['a' => 'A', 'b' => 'B', 'c' => 'C', 'd' => 'D', 'e' => 'E'], 'correta' => 'a', 'fontes' => [], 'comentario_gabarito' => ['a' => '', 'b' => '', 'c' => '', 'd' => '', 'e' => '']]]],
-    ]);
-
     $mock = $this->mock(SimuladoGenerator::class);
-    $mock->shouldReceive('gerar')->once()->andReturn($geracao);
+    $mock->shouldReceive('gerar')->once()->andReturnUsing(function () use ($disciplina) {
+        return Geracao::factory()->create([
+            'tipo' => 'simulado',
+            'status' => 'ok',
+            'escopo' => escopoJson($disciplina),
+            'payload' => ['questoes' => [['contexto' => 'c', 'enunciado' => 'e', 'formato' => 'direto', 'alternativas' => ['a' => 'A', 'b' => 'B', 'c' => 'C', 'd' => 'D', 'e' => 'E'], 'correta' => 'a', 'fontes' => [], 'comentario_gabarito' => ['a' => '', 'b' => '', 'c' => '', 'd' => '', 'e' => '']]]],
+        ]);
+    });
 
     Livewire::test(DisciplinaPage::class, ['slug' => $disciplina->slug])
         ->call('gerarSimulado')
+        ->call('verificarGeracoes')
         ->assertSee('Iniciar Simulado');
 });
 
@@ -304,54 +307,57 @@ it('não lista gerações de outra disciplina', function () {
 it('exibe erro de resumo quando geração é rejeitada', function () {
     $disciplina = criarDisciplinaComPaginas();
 
-    $geracaoRejeitada = Geracao::factory()->create([
-        'tipo' => 'resumo',
-        'status' => 'rejeitado',
-        'escopo' => escopoJson($disciplina),
-        'payload' => [],
-    ]);
-
     $mock = $this->mock(ResumoGenerator::class);
-    $mock->shouldReceive('gerar')->once()->andReturn($geracaoRejeitada);
+    $mock->shouldReceive('gerar')->once()->andReturnUsing(function () use ($disciplina) {
+        return Geracao::factory()->create([
+            'tipo' => 'resumo',
+            'status' => 'rejeitado',
+            'escopo' => escopoJson($disciplina),
+            'payload' => [],
+        ]);
+    });
 
     Livewire::test(DisciplinaPage::class, ['slug' => $disciplina->slug])
         ->call('gerarResumo')
+        ->call('verificarGeracoes')
         ->assertSee('Geração rejeitada');
 });
 
 it('exibe erro de flashcards quando geração é rejeitada', function () {
     $disciplina = criarDisciplinaComPaginas();
 
-    $geracaoRejeitada = Geracao::factory()->create([
-        'tipo' => 'flashcards',
-        'status' => 'rejeitado',
-        'escopo' => escopoJson($disciplina),
-        'payload' => [],
-    ]);
-
     $mock = $this->mock(FlashcardsGenerator::class);
-    $mock->shouldReceive('gerar')->once()->andReturn($geracaoRejeitada);
+    $mock->shouldReceive('gerar')->once()->andReturnUsing(function () use ($disciplina) {
+        return Geracao::factory()->create([
+            'tipo' => 'flashcards',
+            'status' => 'rejeitado',
+            'escopo' => escopoJson($disciplina),
+            'payload' => [],
+        ]);
+    });
 
     Livewire::test(DisciplinaPage::class, ['slug' => $disciplina->slug])
         ->call('gerarFlashcards')
+        ->call('verificarGeracoes')
         ->assertSee('Geração rejeitada');
 });
 
 it('exibe erro de simulado quando geração é rejeitada', function () {
     $disciplina = criarDisciplinaComPaginas();
 
-    $geracaoRejeitada = Geracao::factory()->create([
-        'tipo' => 'simulado',
-        'status' => 'rejeitado',
-        'escopo' => escopoJson($disciplina),
-        'payload' => [],
-    ]);
-
     $mock = $this->mock(SimuladoGenerator::class);
-    $mock->shouldReceive('gerar')->once()->andReturn($geracaoRejeitada);
+    $mock->shouldReceive('gerar')->once()->andReturnUsing(function () use ($disciplina) {
+        return Geracao::factory()->create([
+            'tipo' => 'simulado',
+            'status' => 'rejeitado',
+            'escopo' => escopoJson($disciplina),
+            'payload' => [],
+        ]);
+    });
 
     Livewire::test(DisciplinaPage::class, ['slug' => $disciplina->slug])
         ->call('gerarSimulado')
+        ->call('verificarGeracoes')
         ->assertSee('Geração rejeitada');
 });
 

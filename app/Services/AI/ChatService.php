@@ -16,11 +16,13 @@ class ChatService
 
     private const RESPOSTA_SEM_CONTEXTO = 'Não encontrei isso nos seus apontamentos. Tente uma pergunta diferente ou verifique se o conteúdo foi sincronizado.';
 
-    public function __construct(private readonly RetrievalService $retrieval) {}
+    public function __construct(
+        private readonly RetrievalService $retrieval,
+        private readonly TokenUsageLogger $usageLogger = new TokenUsageLogger,
+    ) {}
 
     /**
      * Responde a pergunta com base nos chunks da vault.
-     * Retorna resposta, fontes consultadas e custo em tokens.
      *
      * @param  array<int, array{role: string, content: string, fontes: array}>  $historico
      * @return array{resposta: string, fontes: list<array{chunk_id: int, pagina_id: int, titulo_pagina: string, heading_path: string|null}>, tokens: int}
@@ -41,14 +43,21 @@ class ChatService
 
         $response = Prism::text()
             ->using('anthropic', self::MODELO)
-            ->withSystemPrompt($this->systemPrompt($chunks))
+            ->withSystemPrompt($this->systemPrompt())
             ->withMessages($messages)
             ->asText();
+
+        $inputTokens = $response->usage->promptTokens;
+        $outputTokens = $response->usage->completionTokens;
+        $cacheWrite = $response->usage->cacheWriteInputTokens ?? 0;
+        $cacheRead = $response->usage->cacheReadInputTokens ?? 0;
+
+        $this->usageLogger->log($inputTokens, $outputTokens, 'chat', $cacheWrite, $cacheRead);
 
         return [
             'resposta' => $response->text,
             'fontes' => $this->extrairFontes($chunks),
-            'tokens' => $response->usage->promptTokens + $response->usage->completionTokens,
+            'tokens' => $inputTokens + $outputTokens,
         ];
     }
 
@@ -80,9 +89,27 @@ class ChatService
         return $messages;
     }
 
-    private function systemPrompt(array $chunks): string
+    private function systemPrompt(): string
     {
-        return 'Você é um assistente de estudos. Responda à pergunta do usuário com base EXCLUSIVAMENTE no conteúdo entre tags [CHUNK] fornecido. Não invente informações ausentes nos apontamentos. Seja direto e didático. Se o contexto não contiver a resposta, diga isso claramente.';
+        return <<<'PROMPT'
+Você é um tutor que auxilia o aluno a compreender profundamente o material de estudos.
+
+REGRA DE FATOS: todo fato, dado, data ou afirmação deve ter origem nos blocos [CHUNK] fornecidos. Não introduza informações ausentes nos apontamentos.
+
+No entanto: explicar, raciocinar, conectar ideias entre blocos e ilustrar com exemplos NÃO é "inventar" — é o seu papel pedagógico. Exerça-o com liberdade.
+
+Para cada resposta:
+1. Identifique o conceito central da pergunta.
+2. Explique não apenas O QUE o material diz, mas POR QUE e COMO: mecanismos, causas, consequências e implicações.
+3. Conecte informações de blocos diferentes quando houver relação entre eles.
+4. Utilize exemplos ou analogias para esclarecer pontos difíceis, indicando quando o exemplo é ilustrativo e não consta nos apontamentos.
+5. Aponte nuances, exceções ou equívocos comuns presentes no material.
+
+Profundidade é mais importante que brevidade. Prefira explicar bem a resumir.
+Adote um tom formal e pedagógico, como de professor para aluno. Sem informalidades ou emojis.
+
+Se o material não contiver a resposta, informe o que falta. Se houver informação parcial relacionada, explique o que é possível inferir e o que permanece em aberto.
+PROMPT;
     }
 
     /**
