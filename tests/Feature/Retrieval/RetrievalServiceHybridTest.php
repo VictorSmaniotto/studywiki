@@ -182,3 +182,79 @@ it('chunk presente em vetor e FTS tem score RRF maior que chunk so em um dos res
 
     expect($scoreAmbos)->toBeGreaterThan($scoreSoVetor);
 });
+
+// ─── multi-disciplina ─────────────────────────────────────────────────────
+
+it('forQuery respeita filtro de multiplas disciplinas no escopo', function (): void {
+    $discA = Disciplina::factory()->create(['slug' => 'disc-multi-a']);
+    $discB = Disciplina::factory()->create(['slug' => 'disc-multi-b']);
+    $discC = Disciplina::factory()->create(['slug' => 'disc-multi-c']);
+
+    $v = array_fill(0, 1024, 0.5);
+
+    $chunkA = chunkEmbedado(paginaEmDiscip($discA), $v, 'conteudo disciplina A');
+    $chunkB = chunkEmbedado(paginaEmDiscip($discB), $v, 'conteudo disciplina B');
+    $chunkC = chunkEmbedado(paginaEmDiscip($discC), $v, 'conteudo disciplina C');
+
+    Prism::fake([vectorResponse($v)]);
+
+    $results = app(RetrievalService::class)->forQuery(
+        'teste',
+        new Escopo(disciplinas: ['disc-multi-a', 'disc-multi-b'])
+    );
+
+    $ids = collect($results)->pluck('chunk_id');
+    expect($ids)->toContain($chunkA->id)
+        ->and($ids)->toContain($chunkB->id)
+        ->and($ids)->not->toContain($chunkC->id);
+});
+
+// ─── fallback por prefixo (sem embeddings, FTS falha em variação) ─────────
+
+it('forQuery usa fallback por prefixo quando FTS nao encontra variacao de palavra', function (): void {
+    $disciplina = Disciplina::factory()->create();
+    $pagina = paginaEmDiscip($disciplina);
+
+    // conteúdo tem "paradigma" (singular); query usa "paradigmas" (plural)
+    $chunk = Chunk::factory()->create([
+        'pagina_id' => $pagina->id,
+        'conteudo' => 'paradigma de programação orientado a objetos',
+        'embedding' => null,
+        'embedding_model' => null,
+    ]);
+
+    Prism::fake([vectorResponse(unitVector(0))]);
+
+    $results = app(RetrievalService::class)->forQuery('paradigmas programação', new Escopo);
+
+    expect(collect($results)->pluck('chunk_id'))->toContain($chunk->id);
+});
+
+it('forQuery fallback por prefixo respeita filtro de disciplina', function (): void {
+    $discA = Disciplina::factory()->create(['slug' => 'disc-fallback-a']);
+    $discB = Disciplina::factory()->create(['slug' => 'disc-fallback-b']);
+
+    $chunkA = Chunk::factory()->create([
+        'pagina_id' => paginaEmDiscip($discA)->id,
+        'conteudo' => 'paradigma de programação funcional',
+        'embedding' => null,
+        'embedding_model' => null,
+    ]);
+
+    Chunk::factory()->create([
+        'pagina_id' => paginaEmDiscip($discB)->id,
+        'conteudo' => 'paradigma de programação imperativo',
+        'embedding' => null,
+        'embedding_model' => null,
+    ]);
+
+    Prism::fake([vectorResponse(unitVector(0))]);
+
+    $results = app(RetrievalService::class)->forQuery(
+        'paradigmas programação',
+        new Escopo(disciplinas: ['disc-fallback-a'])
+    );
+
+    $ids = collect($results)->pluck('chunk_id');
+    expect($ids)->toContain($chunkA->id)->and($ids)->toHaveCount(1);
+});

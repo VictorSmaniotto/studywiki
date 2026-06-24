@@ -62,11 +62,17 @@ atualizado: 2026-06-20 (sessão 10)
 - **T6.6** — Sem escopo residual. Histórico de gerações já coberto integralmente por T6.0 (foreach em todas as gerações por tipo na DisciplinaPage).
 - **T6.7** — Query semântica nos geradores. `DisciplinaPage` ganhou `queryResumo`, `queryFlashcards`, `querySimulado` (string). Quando preenchidos, `Escopo::$query` é passado → `AbstractGenerator` despacha para `forQuery` (retrieval híbrido T4.2). Campo "Focar em tópico" adicionado nos cards de Resumo, Flashcards e Simulado. 5 testes novos; 261/261 suite verde.
 
+- **T6.20** — Monitoramento de consumo de tokens com alerta de orçamento. Tabela `token_usage_logs` (input/output/cache_write/cache_read tokens + custo estimado USD + origem). `TokenUsageLogger` com tabela de preços claude-sonnet-4-6 ($3/$15/$3.75/$0.30 por MTok). `AbstractGenerator::executarPipeline` loga após cada chamada LLM (`origem='geracao'`). `ChatService` portado do branch mobile com logging (`origem='chat'`). Widget Filament `TokenBudgetWidget` no dashboard: gasto/orçamento/saldo; fica vermelho quando saldo < `ANTHROPIC_BUDGET_ALERT_USD`. Config `studywiki.budget_usd` (3.25) e `studywiki.budget_alert_usd` (0.50). 8 testes; 269/269 verdes. **Nota:** ChatService portado do branch mobile — branch `feature/nativephp-mobile` tem T6.9–T6.12 que ainda precisam ser propagados ao main via rebase.
+
+- **T6.24** — Fila assíncrona para respostas do Chat. `ChatResponseJob` (tries=3) move a chamada ao `ChatService` para fora do request HTTP. `Chat::enviar()` adiciona user + placeholder `status:'pending'` imediatamente, persiste e despacha o job. `refreshHistorico()` sincroniza do banco; `wire:poll.2s` dispara enquanto houver pendente. Indicador de três pontos integrado ao loop do historico (por `status`). Guard `temPendente()` impede envio duplo. 339/339 verdes.
+
 ## Fazendo agora
-- Próxima: T6.x — backlog aberto a levantar em sessão de refinamento com o dono.
+- Próxima: T6.21 — Perfil de usuário e settings centralizados.
 
 ## Falta
-- T6.x: backlog aberto — levantar em sessão de refinamento.
+- T6.21: Perfil de usuário e settings centralizados (Livewire `Perfil`, 3 abas: Conta/Aparência/Preferências, `SettingsService` tipado).
+- T6.13, T6.14, T6.15–T6.19: ver tasks.md.
+- Propagação de T6.9–T6.12 do branch mobile para main (rebase).
 
 ## Decisões tomadas (resumo; detalhe em docs/adr)
 - Retrieval estruturado antes de vetor (ADR-0001).

@@ -87,6 +87,7 @@
         </div>
     </flux:main>
 
+    <flux:toast />
     @livewireScripts
     @fluxScripts
 </body>
